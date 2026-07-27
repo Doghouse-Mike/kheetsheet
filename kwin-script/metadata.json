@@ -1,0 +1,16 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Mike"
+            }
+        ],
+        "Description": "Notifies the KheetSheet daemon over D-Bus whenever the active window changes",
+        "Icon": "preferences-system-windows",
+        "Id": "kheetsheet-activewindow",
+        "License": "MIT",
+        "Name": "KheetSheet Active Window Watcher",
+        "Version": "1.0"
+    }
+}

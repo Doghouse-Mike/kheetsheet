@@ -1,0 +1,15 @@
+# Reference only - install.sh generates the real unit itself with the
+# correct path substituted in; it does not read this file.
+[Unit]
+Description=KheetSheet daemon (AT-SPI shortcut overlay)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Environment=QT_QPA_PLATFORM=xcb
+ExecStart=/usr/bin/python3 __PROJECT_DIR__/daemon/__main__.py
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

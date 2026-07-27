@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+KWIN_SCRIPT_ID="kheetsheet-activewindow"
+SERVICE_NAME="kheetsheet-daemon.service"
+
+echo "==> Checking dependencies..."
+missing=()
+python3 -c "import PyQt6.QtWidgets, PyQt6.QtDBus" 2>/dev/null || missing+=("python3-pyqt6")
+python3 -c "import dbus" 2>/dev/null || missing+=("python3-dbus")
+python3 -c "import dbus.mainloop.pyqt6" 2>/dev/null || missing+=("python3-dbus.mainloop.pyqt6")
+python3 -c "import gi" 2>/dev/null || missing+=("python3-gi")
+python3 -c "import gi; gi.require_version('Atspi','2.0'); from gi.repository import Atspi" 2>/dev/null || missing+=("gir1.2-atspi-2.0")
+command -v kpackagetool6 >/dev/null 2>&1 || missing+=("kpackagetool6")
+command -v kwriteconfig6 >/dev/null 2>&1 || missing+=("libkf6config-bin")
+command -v qdbus6 >/dev/null 2>&1 || missing+=("qdbus-qt6")
+
+if [ ${#missing[@]} -ne 0 ]; then
+    echo "Missing dependencies, install these and re-run (see README.md for the full install command):"
+    printf '  - %s\n' "${missing[@]}"
+    exit 1
+fi
+
+# A terminal launched from a sandboxed app (e.g. a snap-packaged IDE) may have
+# XDG_DATA_HOME redirected to that app's private sandbox directory, which
+# would silently install the KWin script somewhere KWin never reads from.
+REAL_XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+case "$REAL_XDG_DATA_HOME" in
+    "$HOME"/snap/*)
+        echo "Note: sandboxed XDG_DATA_HOME detected ($REAL_XDG_DATA_HOME), using \$HOME/.local/share instead."
+        REAL_XDG_DATA_HOME="$HOME/.local/share"
+        ;;
+esac
+
+echo "==> Installing KWin active-window watcher script..."
+# Always reinstall clean rather than relying on `-u` (upgrade): kpackagetool6's
+# upgrade path re-validates the *already-installed* metadata.json against
+# --type, so an older install lacking a field kpackagetool6 later started
+# requiring (e.g. KPackageStructure) makes -u fail even when the new source
+# metadata.json is fine. Removing first sidesteps that comparison entirely.
+rm -rf "$REAL_XDG_DATA_HOME/kwin/scripts/$KWIN_SCRIPT_ID"
+XDG_DATA_HOME="$REAL_XDG_DATA_HOME" kpackagetool6 --type KWin/Script -i "$PROJECT_DIR/kwin-script"
+kwriteconfig6 --file kwinrc --group Plugins --key "${KWIN_SCRIPT_ID}Enabled" true
+qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
+
+SCRIPT_MAIN_JS="$REAL_XDG_DATA_HOME/kwin/scripts/$KWIN_SCRIPT_ID/contents/code/main.js"
+qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript "$SCRIPT_MAIN_JS" "$KWIN_SCRIPT_ID" >/dev/null 2>&1 || true
+qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.start >/dev/null 2>&1 || true
+
+echo "==> Installing systemd user service..."
+mkdir -p "$HOME/.config/systemd/user"
+cat > "$HOME/.config/systemd/user/$SERVICE_NAME" <<EOF
+[Unit]
+Description=KheetSheet daemon (AT-SPI shortcut overlay)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Environment=QT_QPA_PLATFORM=xcb
+ExecStart=/usr/bin/python3 $PROJECT_DIR/daemon/__main__.py
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target
+EOF
+systemctl --user daemon-reload
+systemctl --user enable --now "$SERVICE_NAME"
+
+cat <<'EOF'
+
+==> Install complete.
+
+One manual step remains -- kglobalaccel only registers command shortcuts
+through its real registration protocol, not by reading config files off disk
+(a plain .desktop file + kglobalshortcutsrc entry gets silently discarded on
+next login, confirmed the hard way). So:
+
+  1. Open System Settings -> Shortcuts.
+  2. Click "Add New" (top right) -> "Command or Script".
+  3. Name it "KheetSheet", set your preferred trigger key, and set the command to:
+       gdbus call --session --dest com.kheetsheet.Daemon --object-path /KheetSheet --method com.kheetsheet.Daemon.Toggle
+  4. Click Apply.
+
+Double-check the key that actually lands in the trigger field before saving --
+it can end up different from what you pressed (e.g. picking up extra held
+modifiers) if the recording widget catches a stray keypress.
+EOF

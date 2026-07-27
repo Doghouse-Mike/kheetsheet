@@ -1,0 +1,135 @@
+# KheetSheet
+
+A KDE Plasma clone of the Mac app "Cheatsheet": press a hotkey, see the focused
+app's keyboard shortcuts in an overlay, grouped by menu. Shortcut data comes
+entirely from AT-SPI (the accessibility tree) — no hand-maintained per-app
+database. If an app doesn't expose its menu via AT-SPI (many GTK4/Electron
+apps), you'll get an honest "no shortcuts found" instead of stale or
+fabricated data.
+
+## Install
+
+On Kubuntu/Debian/Ubuntu-based Plasma 6 desktops, install all dependencies first:
+
+```
+sudo apt install python3-pyqt6 python3-dbus python3-dbus.mainloop.pyqt6 \
+    python3-gi gir1.2-atspi-2.0 kpackagetool6 libkf6config-bin qdbus-qt6
+```
+
+Then run:
+
+```
+./install.sh
+```
+
+This automates the KWin active-window watcher script and the
+`kheetsheet-daemon` systemd user service. Accessibility (AT-SPI) is enabled by
+the daemon itself at every startup via `org.a11y.Status.IsEnabled` — see the
+pitfall below for why that's *not* done via `kaccessrc`.
+
+**One manual step remains: the global shortcut.** `kglobalaccel` only
+registers command shortcuts through its own D-Bus registration protocol, not
+by reading files off disk — a plain `.desktop` file + `kglobalshortcutsrc`
+entry gets silently discarded on the next login (confirmed the hard way, see
+below). So after running `install.sh`:
+
+1. Open System Settings → Shortcuts.
+2. Click "Add New" (top right) → "Command or Script".
+3. Name it "KheetSheet", set your preferred trigger key, and set the command to:
+   ```
+   gdbus call --session --dest com.kheetsheet.Daemon --object-path /KheetSheet --method com.kheetsheet.Daemon.Toggle
+   ```
+4. Click Apply.
+
+Double-check the key that actually lands in the trigger field before saving —
+it can end up different from what you pressed if the recording widget catches
+extra held modifiers.
+
+### Dependencies
+
+`install.sh` checks for the packages listed above (by the binaries/Python
+modules they provide, not the package names themselves) and tells you what's
+missing rather than installing anything — it won't get partway through and
+leave things in a broken state. The `apt install` command above should
+satisfy the check in one shot on any Debian/Ubuntu-based Plasma 6 system;
+these are all standard KDE/Plasma 6 packages, not anything project-specific.
+
+On a non-apt distro (Fedora/Bazzite, Arch, etc.), the package names will
+differ — just run `./install.sh` and it'll tell you exactly which
+binaries/modules it couldn't find, which you can then map to that distro's
+package names.
+
+## Usage
+
+Press your bound shortcut to show the current app's shortcuts; press it again
+(or Esc) to dismiss.
+
+## Architecture
+
+- **`daemon/`** — a Python D-Bus service (`com.kheetsheet.Daemon` at
+  `/KheetSheet`) that walks AT-SPI's accessible tree for the active app and
+  renders a translucent overlay (PyQt6) of its real shortcuts. Runs under
+  `QT_QPA_PLATFORM=xcb` — under KWin/Wayland, a native Qt-Wayland window
+  doesn't honor always-on-top or absolute positioning, so the overlay runs as
+  an XWayland client instead, where both work correctly.
+- **`kwin-script/`** — a KWin script watching active-window changes, reporting
+  them to the daemon via `NotifyActiveWindow`.
+- **`systemd/kheetsheet-daemon.service`** — the installed user unit (a
+  template; `install.sh` writes the real one with the correct path baked in).
+- **`install.sh`** — installs both of the above; the global shortcut is a
+  manual step (see Install section).
+
+## Known limitations
+
+- Only apps that expose their menu via AT-SPI will show anything. Traditional
+  Qt/KDE apps (Dolphin, Kate, Konsole, ...) generally work well. Many GTK4 apps
+  (header-bar-only, no traditional menu bar) and Electron apps expose little or
+  nothing — the overlay will say so rather than guess.
+- Snap-confined apps may be blocked by AppArmor from querying other apps'
+  accessible trees (observed with the VS Code snap querying Vivaldi's snap) —
+  this doesn't affect the daemon querying non-snap apps.
+- If you're re-running `install.sh` from inside a **snap-confined terminal**
+  (e.g. one launched from VS Code's snap package), be aware `XDG_DATA_HOME`
+  may be redirected to that snap's private directory — the installer detects
+  and corrects for this automatically, but it's worth knowing about if you're
+  debugging by hand outside the script.
+- Tested so far only on Kubuntu/Plasma 6.6/Wayland. Bazzite (Fedora Atomic,
+  likely SELinux + heavier Flatpak usage) hasn't been checked yet.
+
+## A note on enabling accessibility
+
+Don't set `kwriteconfig6 --file kaccessrc --group ScreenReader --key Enabled
+true` to get AT-SPI working. That key isn't a lightweight "turn on the
+accessibility bus" flag — it's the literal switch KDE uses to autostart Orca,
+the real speaking screen reader, at every login (learned this the hard way:
+it made Orca launch and start reading the screen out loud every session).
+The bus-level flag apps actually need (`org.a11y.Status.IsEnabled`) is
+separate and much lighter weight — the daemon sets that directly on its own
+D-Bus session bus at startup (`ensure_accessibility_enabled()` in
+`daemon/service.py`), which is sufficient on its own and doesn't touch Orca
+at all. If you ever want Orca off after having turned this on, `kwriteconfig6
+--file kaccessrc --group ScreenReader --key Enabled false` and kill any
+running `orca` process.
+
+## A note on kglobalaccel
+
+Two dead ends worth not repeating:
+
+- **Don't try to fully automate registration by writing a `.desktop` file +
+  `kglobalshortcutsrc` entry directly.** It looks like it should work (the
+  fields match exactly what the GUI writes), but `kglobalaccel` doesn't
+  passively trust config files — it only recognizes shortcuts registered
+  through its real protocol, and silently discards the rest on its next
+  startup, even after a full reboot and a `kbuildsycoca6` cache rebuild.
+  Confirmed this by staging the entry, rebooting, and finding it gone. The
+  "Add New" GUI flow is the one path known to work, because it calls the
+  registration protocol correctly.
+- **Don't hand-craft raw `setForeignShortcutKeys`/`doRegister` D-Bus calls
+  against `org.kde.kglobalaccel` to try to script that protocol yourself
+  instead.** In Plasma 6, `kglobalaccel` runs in-process inside
+  `kwin_wayland`, and a malformed call there crashed the entire compositor
+  (KWin's crash-restart supervisor recovered the session, but it's not a risk
+  worth taking).
+
+Net effect: the global shortcut is a manual, GUI-only step. `install.sh`
+doesn't attempt it.
