@@ -7,57 +7,76 @@ database. If an app doesn't expose its menu via AT-SPI (many GTK4/Electron
 apps), you'll get an honest "no shortcuts found" instead of stale or
 fabricated data.
 
-## Install
+## Screenshots
 
-On Kubuntu/Debian/Ubuntu-based Plasma 6 desktops, install all dependencies first:
+Real output, captured live against running apps.
+
+| Real shortcuts (Dolphin) | App with no AT-SPI menu (VS Code) |
+| --- | --- |
+| ![Overlay showing Dolphin's File and Edit shortcuts](screenshots/example-dolphin.png) | ![Overlay showing the honest "no shortcuts" message](screenshots/example-no-shortcuts.png) |
+
+## Supported systems
+
+Any KDE Plasma 6 desktop. Distro-specific install steps:
+
+- **Kubuntu / Debian / Ubuntu-based** — this page.
+- **Bazzite / Fedora Atomic** — see [BAZZITE-README.md](BAZZITE-README.md).
+
+## Install (Kubuntu/Debian/Ubuntu-based Plasma 6)
+
+### 1. Install dependencies
 
 ```
 sudo apt install python3-pyqt6 python3-dbus python3-dbus.mainloop.pyqt6 \
     python3-gi gir1.2-atspi-2.0 kpackagetool6 libkf6config-bin qdbus-qt6
 ```
 
-Then run:
+These are all standard KDE/Plasma 6 packages, nothing project-specific.
+`install.sh` checks for them by the binaries/Python modules they provide (not
+the package names) and tells you exactly what's missing rather than
+installing anything itself — it won't get partway through and leave things in
+a broken state.
+
+### 2. Run the installer
 
 ```
 ./install.sh
 ```
 
-This automates the KWin active-window watcher script and the
-`kheetsheet-daemon` systemd user service. Accessibility (AT-SPI) is enabled by
-the daemon itself at every startup via `org.a11y.Status.IsEnabled` — see the
-pitfall below for why that's *not* done via `kaccessrc`.
+This installs the KWin active-window watcher script and the
+`kheetsheet-daemon` systemd user service, and starts the daemon immediately.
+Accessibility (AT-SPI) is enabled by the daemon itself at every startup via
+`org.a11y.Status.IsEnabled` — see [the note below](#a-note-on-enabling-accessibility)
+for why that's *not* done via `kaccessrc`.
 
-**One manual step remains: the global shortcut.** `kglobalaccel` only
-registers command shortcuts through its own D-Bus registration protocol, not
-by reading files off disk — a plain `.desktop` file + `kglobalshortcutsrc`
-entry gets silently discarded on the next login (confirmed the hard way, see
-below). So after running `install.sh`:
+### 3. Bind the global shortcut (manual step)
 
-1. Open System Settings → Shortcuts.
-2. Click "Add New" (top right) → "Command or Script".
+`kglobalaccel` only registers command shortcuts through its own D-Bus
+registration protocol, not by reading files off disk — a plain `.desktop`
+file + `kglobalshortcutsrc` entry gets silently discarded on the next login
+(confirmed the hard way, see [the note below](#a-note-on-kglobalaccel)). So
+this one step has to be done through the GUI:
+
+1. Open **System Settings → Shortcuts**.
+2. Click **"Add New"** (top right) → **"Command or Script"**.
 3. Name it "KheetSheet", set your preferred trigger key, and set the command to:
    ```
    gdbus call --session --dest com.kheetsheet.Daemon --object-path /KheetSheet --method com.kheetsheet.Daemon.Toggle
    ```
-4. Click Apply.
+4. Click **Apply**.
 
 Double-check the key that actually lands in the trigger field before saving —
 it can end up different from what you pressed if the recording widget catches
 extra held modifiers.
 
-### Dependencies
+### 4. Try it
 
-`install.sh` checks for the packages listed above (by the binaries/Python
-modules they provide, not the package names themselves) and tells you what's
-missing rather than installing anything — it won't get partway through and
-leave things in a broken state. The `apt install` command above should
-satisfy the check in one shot on any Debian/Ubuntu-based Plasma 6 system;
-these are all standard KDE/Plasma 6 packages, not anything project-specific.
+Press your bound shortcut over any Qt/KDE app (Dolphin, Kate, Konsole, ...).
+Press it again (or Esc) to dismiss.
 
-On a non-apt distro (Fedora/Bazzite, Arch, etc.), the package names will
-differ — just run `./install.sh` and it'll tell you exactly which
-binaries/modules it couldn't find, which you can then map to that distro's
-package names.
+On a non-apt distro not covered by a dedicated guide (Arch, etc.), just run
+`./install.sh` — it'll tell you exactly which binaries/modules it couldn't
+find, which you can then map to that distro's package names.
 
 ## Usage
 
@@ -93,8 +112,8 @@ Press your bound shortcut to show the current app's shortcuts; press it again
   may be redirected to that snap's private directory — the installer detects
   and corrects for this automatically, but it's worth knowing about if you're
   debugging by hand outside the script.
-- Tested so far only on Kubuntu/Plasma 6.6/Wayland. Bazzite (Fedora Atomic,
-  likely SELinux + heavier Flatpak usage) hasn't been checked yet.
+- Verified on Kubuntu/Plasma 6.6/Wayland and on Bazzite (Fedora Atomic) —
+  see [BAZZITE-README.md](BAZZITE-README.md) for the Fedora-specific notes.
 
 ## A note on enabling accessibility
 

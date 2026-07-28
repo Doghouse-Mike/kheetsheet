@@ -14,7 +14,8 @@ python3 -c "import gi" 2>/dev/null || missing+=("python3-gi")
 python3 -c "import gi; gi.require_version('Atspi','2.0'); from gi.repository import Atspi" 2>/dev/null || missing+=("gir1.2-atspi-2.0")
 command -v kpackagetool6 >/dev/null 2>&1 || missing+=("kpackagetool6")
 command -v kwriteconfig6 >/dev/null 2>&1 || missing+=("libkf6config-bin")
-command -v qdbus6 >/dev/null 2>&1 || missing+=("qdbus-qt6")
+QDBUS_BIN="$(command -v qdbus6 || command -v qdbus-qt6 || true)"
+[ -n "$QDBUS_BIN" ] || missing+=("qdbus-qt6")
 
 if [ ${#missing[@]} -ne 0 ]; then
     echo "Missing dependencies, install these and re-run (see README.md for the full install command):"
@@ -42,11 +43,11 @@ echo "==> Installing KWin active-window watcher script..."
 rm -rf "$REAL_XDG_DATA_HOME/kwin/scripts/$KWIN_SCRIPT_ID"
 XDG_DATA_HOME="$REAL_XDG_DATA_HOME" kpackagetool6 --type KWin/Script -i "$PROJECT_DIR/kwin-script"
 kwriteconfig6 --file kwinrc --group Plugins --key "${KWIN_SCRIPT_ID}Enabled" true
-qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
+"$QDBUS_BIN" org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
 
 SCRIPT_MAIN_JS="$REAL_XDG_DATA_HOME/kwin/scripts/$KWIN_SCRIPT_ID/contents/code/main.js"
-qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript "$SCRIPT_MAIN_JS" "$KWIN_SCRIPT_ID" >/dev/null 2>&1 || true
-qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.start >/dev/null 2>&1 || true
+"$QDBUS_BIN" org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript "$SCRIPT_MAIN_JS" "$KWIN_SCRIPT_ID" >/dev/null 2>&1 || true
+"$QDBUS_BIN" org.kde.KWin /Scripting org.kde.kwin.Scripting.start >/dev/null 2>&1 || true
 
 echo "==> Installing systemd user service..."
 mkdir -p "$HOME/.config/systemd/user"
