@@ -1,4 +1,5 @@
 import os
+import re
 
 import dbus
 import gi
@@ -14,6 +15,42 @@ KWIN_SCRIPT_ID = "kheetsheet-activewindow"
 
 MENU_ROLES = {"menu", "menu item", "check menu item", "radio menu item"}
 MENU_BAR_ROLE = "menu bar"
+
+_GTK_MODIFIER_LABELS = {
+    "control": "Ctrl",
+    "primary": "Ctrl",
+    "shift": "Shift",
+    "alt": "Alt",
+    "super": "Super",
+    "meta": "Meta",
+}
+_GTK_MODIFIER_TAG = re.compile(r"<(\w+)>")
+
+
+def _normalize_key_binding(raw):
+    if not raw:
+        return None
+    if ";" not in raw:
+        # Qt/KDE apps' ATK-adjacent bridge already returns a clean,
+        # human-readable string (e.g. "Ctrl+N") - nothing to parse.
+        return raw
+    # GTK/ATK's format is "mnemonic;menu-path;accelerator", three fields
+    # meant to be parsed rather than displayed verbatim. Only the third
+    # field is a real, always-available keyboard shortcut - the other two
+    # are Alt-driven menu-navigation aids. Dynamic, non-command menu items
+    # (browsing history entries, bookmark lists, ...) share the same
+    # "menu item" role as real commands but have no accelerator at all, so
+    # requiring a non-empty third field also filters those out.
+    parts = raw.split(";")
+    accel = parts[2] if len(parts) >= 3 else ""
+    if not accel:
+        return None
+    mods = _GTK_MODIFIER_TAG.findall(accel)
+    remainder = _GTK_MODIFIER_TAG.sub("", accel)
+    labels = [_GTK_MODIFIER_LABELS.get(mod.lower(), mod) for mod in mods]
+    if remainder:
+        labels.append(remainder.upper() if len(remainder) == 1 else remainder)
+    return "+".join(labels)
 
 
 def ensure_accessibility_enabled():
@@ -96,9 +133,9 @@ def collect_shortcuts(app_node, max_depth=15):
 
         if role in MENU_ROLES and name and group is not None:
             try:
-                key_binding = acc.get_key_binding(0)
+                key_binding = _normalize_key_binding(acc.get_key_binding(0))
             except Exception:
-                key_binding = ""
+                key_binding = None
             if key_binding:
                 shortcuts.append((group, name, key_binding))
 
