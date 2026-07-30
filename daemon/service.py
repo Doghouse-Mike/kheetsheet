@@ -49,16 +49,34 @@ def ensure_kwin_script_loaded():
     scripting.start()
 
 
-def find_app_node_by_pid(pid):
+def find_app_node_by_pid(pid, app_id=None):
+    # Flatpak-sandboxed apps route their D-Bus traffic through a per-instance
+    # xdg-dbus-proxy process, so AT-SPI (and KWin, separately) each end up
+    # reporting a different pid for the same window - the proxy's pid, not
+    # the real app's - and they're not parent/child of each other, so there's
+    # no reliable way to translate one into the other. An exact pid match is
+    # still tried first since it's precise and unaffected for normal (non-
+    # sandboxed) apps, but when it fails, fall back to a loose match between
+    # the AT-SPI app's own name and the window's resourceClass (app_id) -
+    # good enough to recover Flatpak apps that would otherwise never be found.
     desktop = Atspi.get_desktop(0)
+    normalized_app_id = app_id.strip().lower() if app_id else None
+    fallback = None
     for i in range(desktop.get_child_count()):
         app = desktop.get_child_at_index(i)
         try:
             if app.get_process_id() == pid:
                 return app
         except Exception:
-            continue
-    return None
+            pass
+        if fallback is None and normalized_app_id:
+            try:
+                name = (app.get_name() or "").strip().lower()
+            except Exception:
+                continue
+            if name and (name in normalized_app_id or normalized_app_id in name):
+                fallback = app
+    return fallback
 
 
 def collect_shortcuts(app_node, max_depth=15):
@@ -135,8 +153,8 @@ def collect_shortcuts(app_node, max_depth=15):
     return shortcuts
 
 
-def shortcuts_for_pid(pid):
-    app_node = find_app_node_by_pid(pid)
+def shortcuts_for_pid(pid, app_id=None):
+    app_node = find_app_node_by_pid(pid, app_id=app_id)
     if app_node is None:
         return None, []
     try:

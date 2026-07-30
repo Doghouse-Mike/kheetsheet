@@ -122,6 +122,14 @@ Press your bound shortcut to show the current app's shortcuts; press it again
   Qt/KDE apps (Dolphin, Kate, Konsole, ...) generally work well. Many GTK4 apps
   (header-bar-only, no traditional menu bar) and Electron apps expose little or
   nothing — the overlay will say so rather than guess.
+- Flatpak apps are matched by pid first, falling back to matching the AT-SPI
+  app's name against the window's `resourceClass` — needed because every
+  Flatpak app's D-Bus traffic goes through a per-instance `xdg-dbus-proxy`,
+  so AT-SPI sees the proxy's pid for a window rather than the real app's.
+  This recovers real shortcut data for Flatpak apps that expose a normal
+  menu, but some (Firefox among them) only populate a given submenu's
+  accessible items after it's been opened at least once in the running
+  session — those show as empty until you've clicked into each menu manually.
 - Snap-confined apps may be blocked by AppArmor from querying other apps'
   accessible trees (observed with the VS Code snap querying Vivaldi's snap) —
   this doesn't affect the daemon querying non-snap apps.

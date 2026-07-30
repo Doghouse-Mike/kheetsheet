@@ -105,6 +105,15 @@ reinstalling, and restarting the daemon regardless of distro.
   enables `org.a11y.Status.IsEnabled` itself, and the KWin script loads and
   reports active-window changes, all via the same systemd user service setup
   as Kubuntu.
+- **Flatpak apps** (common on Bazzite, which leans heavily on Flatpak for
+  browsers and other user apps) — found and fixed a real bug here: every
+  Flatpak app routes its D-Bus traffic through a per-instance
+  `xdg-dbus-proxy`, so AT-SPI sees the *proxy's* pid for a window, not the
+  real app's, while KWin reports the real one — they never matched, so
+  Flatpak apps were silently unsupported regardless of whether they exposed
+  a menu at all. The daemon now falls back to matching the AT-SPI app's name
+  against the window's `resourceClass` when the exact pid lookup misses.
+  Confirmed working end-to-end against Firefox and Vivaldi (both Flatpak).
 
 ## Things not yet checked on Bazzite
 
@@ -113,9 +122,3 @@ reinstalling, and restarting the daemon regardless of distro.
   AT-SPI tree — this didn't affect KheetSheet's own use case, but SELinux
   (enabled by default on Fedora/Bazzite) enforces differently and hasn't been
   checked against this daemon's AT-SPI queries specifically.
-- **Flatpak sandboxing.** Bazzite leans heavily on Flatpak for user apps
-  (browsers, etc., often not available any other way). Flatpak's sandboxing
-  of the accessibility bus is a real open question — it may behave like the
-  snap confinement case (some apps blocked from exposing/querying AT-SPI
-  data), or it may be stricter, or looser. Worth testing against a few
-  representative Flatpak apps if you rely on this.

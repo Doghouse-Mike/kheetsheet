@@ -37,7 +37,7 @@ class KheetSheetService(dbus.service.Object):
         if self._active_pid is None:
             self._overlay.show_shortcuts("No active window known", [])
             return
-        app_name, shortcuts = shortcuts_for_pid(self._active_pid)
+        app_name, shortcuts = shortcuts_for_pid(self._active_pid, self._active_app_id)
         self._overlay.show_shortcuts(app_name or self._active_app_id, shortcuts)
 
 
