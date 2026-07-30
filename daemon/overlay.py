@@ -69,6 +69,17 @@ class KheetSheetOverlay(QWidget):
 
     def show_shortcuts(self, app_name, shortcuts):
         self._title.setText(app_name or "Unknown application")
+
+        # QScrollArea (in setWidgetResizable(False) mode) silently freezes
+        # _grid_holder's effective size after the first show_shortcuts() call
+        # - adjustSize() stops taking effect once the scroll area has adopted
+        # the widget, so later calls with differently-sized content (e.g. the
+        # single "no shortcuts" label after a big real shortcut list, or vice
+        # versa) get stuck at whatever size was shown first. Detaching the
+        # widget before rebuilding and resizing it, then reattaching, avoids
+        # that. The scroll area's own sizeHint() also doesn't propagate to
+        # the window's layout on its own - updateGeometry() forces that.
+        self._scroll.takeWidget()
         self._clear_grid()
 
         if not shortcuts:
@@ -83,6 +94,10 @@ class KheetSheetOverlay(QWidget):
                 self._grid.addWidget(column_widget, row, grid_col, Qt.AlignmentFlag.AlignTop)
 
         self._grid_holder.adjustSize()
+        self._scroll.setWidget(self._grid_holder)
+        self._scroll.updateGeometry()
+        self._container.updateGeometry()
+
         # Bound the whole popup to a fraction of the screen and let resize()
         # clamp to that; the layout shrinks the (flexible) scroll area to
         # make room rather than the title, so long lists scroll instead of
