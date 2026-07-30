@@ -88,6 +88,12 @@ extraction returns real shortcut data (confirmed against Dolphin and Kate),
 and the overlay renders correctly as an XWayland client over the Wayland
 session.
 
+## Updating
+
+Same process as Kubuntu — see [README.md](README.md#updating). Nothing
+Bazzite-specific about it; `install.sh` handles re-checking dependencies,
+reinstalling, and restarting the daemon regardless of distro.
+
 ## Things confirmed working on Bazzite
 
 - **AT-SPI extraction** — walking a running app's accessible tree and pulling

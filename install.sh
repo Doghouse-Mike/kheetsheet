@@ -23,6 +23,18 @@ if [ ${#missing[@]} -ne 0 ]; then
     exit 1
 fi
 
+# Detect a previous install pointing at a different copy of this project
+# (e.g. an older download/extraction) before we overwrite its service file
+# below - the daemon only ever runs from one path at a time, so once this
+# run finishes, that old copy is dead weight rather than a working install.
+# We only report it; deleting an arbitrary directory automatically isn't
+# something this script does.
+OLD_SERVICE_FILE="$HOME/.config/systemd/user/$SERVICE_NAME"
+OLD_PROJECT_DIR=""
+if [ -f "$OLD_SERVICE_FILE" ]; then
+    OLD_PROJECT_DIR="$(sed -n 's|^ExecStart=/usr/bin/python3 \(.*\)/daemon/__main__\.py$|\1|p' "$OLD_SERVICE_FILE")"
+fi
+
 # A terminal launched from a sandboxed app (e.g. a snap-packaged IDE) may have
 # XDG_DATA_HOME redirected to that app's private sandbox directory, which
 # would silently install the KWin script somewhere KWin never reads from.
@@ -67,7 +79,13 @@ RestartSec=2
 WantedBy=graphical-session.target
 EOF
 systemctl --user daemon-reload
-systemctl --user enable --now "$SERVICE_NAME"
+systemctl --user enable "$SERVICE_NAME"
+# `enable --now` only *starts* the unit, which is a no-op if it's already
+# running from a previous install - it would silently keep running the old
+# code instead of picking up whatever changed in this run. `restart` starts
+# it if stopped and restarts it if already active, so an upgrade always
+# takes effect immediately rather than waiting for the next login/reboot.
+systemctl --user restart "$SERVICE_NAME"
 
 cat <<'EOF'
 
@@ -88,3 +106,15 @@ Double-check the key that actually lands in the trigger field before saving --
 it can end up different from what you pressed (e.g. picking up extra held
 modifiers) if the recording widget catches a stray keypress.
 EOF
+
+if [ -n "$OLD_PROJECT_DIR" ] && [ "$OLD_PROJECT_DIR" != "$PROJECT_DIR" ]; then
+    cat <<EOF
+
+==> Note: a previous install pointed at:
+      $OLD_PROJECT_DIR
+    The daemon now runs from this copy instead:
+      $PROJECT_DIR
+    That old directory is no longer used for anything -- safe to delete it
+    once you've confirmed this one works.
+EOF
+fi

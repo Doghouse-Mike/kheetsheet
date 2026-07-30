@@ -78,6 +78,24 @@ On a non-apt distro not covered by a dedicated guide (Arch, etc.), just run
 `./install.sh` — it'll tell you exactly which binaries/modules it couldn't
 find, which you can then map to that distro's package names.
 
+## Updating
+
+1. **If you previously downloaded a `.zip`, delete that old extracted folder
+   first.** Grabbing a fresh copy alongside an old one just leaves two copies
+   lying around — only one is ever wired up to actually run, and it's easy to
+   lose track of which. (If you cloned with `git` instead, skip this — just
+   `git pull` in the same folder.)
+2. Get the new version (fresh `.zip` extract, or `git pull`).
+3. Run `./install.sh` again from the new copy.
+
+`install.sh` re-checks dependencies (skips anything already satisfied),
+reinstalls the KWin script and systemd service, and always restarts the
+daemon — even if it was already running — so an update takes effect
+immediately instead of silently waiting for your next login. If it notices
+the systemd service previously pointed at a *different* directory (meaning
+you ran it from a new location rather than updating in place), it'll say so
+at the end and name the old directory, since that one's now safe to delete.
+
 ## Usage
 
 Press your bound shortcut to show the current app's shortcuts; press it again
