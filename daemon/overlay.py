@@ -83,7 +83,10 @@ class KheetSheetOverlay(QWidget):
         self._clear_grid()
 
         if not shortcuts:
-            empty = QLabel("No AT-SPI-exposed shortcuts found for this application.")
+            empty = QLabel(
+                "No AT-SPI-exposed shortcuts found for this application.\n"
+                "GTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+            )
             self._grid.addWidget(empty, 0, 0)
         else:
             groups = [(g, list(items)) for g, items in groupby(shortcuts, key=lambda s: s[0])]
