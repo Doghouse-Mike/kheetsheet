@@ -1,6 +1,6 @@
 from itertools import groupby
 
-from PyQt6.QtCore import QEvent, QRect, QSize, Qt, QTimer
+from PyQt6.QtCore import QEvent, QRect, QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QWidget,
@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QGridLayout,
     QGraphicsDropShadowEffect,
     QScrollArea,
-    QPushButton,
+    QFrame,
 )
 
 from service import invoke_shortcut
@@ -22,6 +22,42 @@ CLICK_FEEDBACK_MS = 150
 
 MAX_COLUMNS = 4
 MAX_SCREEN_FRACTION = 0.85
+
+
+class ShortcutRow(QFrame):
+    # A plain QWidget/QFrame sizes itself from its layout's sizeHint, unlike
+    # QAbstractButton (including a flat QPushButton with a custom layout set
+    # on it), whose sizeHint comes from its own text/icon metrics regardless
+    # of what's actually inside it - that mismatch was squeezing the real
+    # content (esp. the name label) into a too-small button and truncating
+    # it. This gets the click/hover/press behavior back without that.
+    clicked = pyqtSignal()
+
+    def __init__(self):
+        super().__init__()
+        self.setObjectName("shortcutRow")
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAttribute(Qt.WidgetAttribute.WA_Hover)
+        self._pressed = False
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._pressed = True
+            self._repolish()
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and self._pressed:
+            self._pressed = False
+            self._repolish()
+            if self.rect().contains(event.position().toPoint()):
+                self.clicked.emit()
+        super().mouseReleaseEvent(event)
+
+    def _repolish(self):
+        self.setProperty("pressed", self._pressed)
+        self.style().unpolish(self)
+        self.style().polish(self)
 
 
 class KheetSheetOverlay(QWidget):
@@ -40,12 +76,9 @@ class KheetSheetOverlay(QWidget):
         self._container.setStyleSheet(
             "#container { background-color: rgba(20, 20, 20, 235); border-radius: 14px; }"
             "QLabel { color: #eeeeee; }"
-            "QPushButton#shortcutRow {"
-            "  background: transparent; border: none; border-radius: 6px;"
-            "  padding: 2px 4px; text-align: left;"
-            "}"
-            "QPushButton#shortcutRow:hover { background-color: rgba(255,255,255,25); }"
-            "QPushButton#shortcutRow:pressed { background-color: rgba(120,170,255,70); }"
+            "QFrame#shortcutRow { background: transparent; border-radius: 6px; }"
+            "QFrame#shortcutRow:hover { background-color: rgba(255,255,255,25); }"
+            "QFrame#shortcutRow[pressed=\"true\"] { background-color: rgba(120,170,255,70); }"
         )
         shadow = QGraphicsDropShadowEffect(blurRadius=40, xOffset=0, yOffset=8)
         self._container.setGraphicsEffect(shadow)
@@ -147,13 +180,10 @@ class KheetSheetOverlay(QWidget):
         layout.addWidget(header)
 
         for _, item_name, key_binding, accessible in items:
-            row = QPushButton()
-            row.setObjectName("shortcutRow")
-            row.setCursor(Qt.CursorShape.PointingHandCursor)
-            row.setFlat(True)
+            row = ShortcutRow()
 
-            row_layout = QHBoxLayout()
-            row_layout.setContentsMargins(0, 0, 0, 0)
+            row_layout = QHBoxLayout(row)
+            row_layout.setContentsMargins(4, 2, 4, 2)
             row_layout.setSpacing(12)
             key_label = QLabel(key_binding)
             key_label.setStyleSheet(
@@ -164,9 +194,8 @@ class KheetSheetOverlay(QWidget):
             row_layout.addWidget(key_label)
             row_layout.addWidget(name_label)
             row_layout.addStretch()
-            row.setLayout(row_layout)
 
-            row.clicked.connect(lambda checked=False, acc=accessible: self._on_shortcut_clicked(acc))
+            row.clicked.connect(lambda acc=accessible: self._on_shortcut_clicked(acc))
             layout.addWidget(row)
 
         return column
