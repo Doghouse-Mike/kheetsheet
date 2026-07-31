@@ -141,6 +141,39 @@ Press your bound shortcut to show the current app's shortcuts; press it again
 - Verified on Kubuntu/Plasma 6.6/Wayland and on Bazzite (Fedora Atomic) —
   see [BAZZITE-README.md](BAZZITE-README.md) for the Fedora-specific notes.
 
+## App compatibility
+
+A quick reference for popular apps. "Verified" means actually tested in this
+project's development; everything else is inferred from the same underlying
+mechanism as a verified app of the same kind — see
+[Known limitations](#known-limitations) above for the *why* in more detail.
+
+### Works well
+
+| App | Why |
+| --- | --- |
+| Dolphin | Verified. |
+| Konsole | Verified. |
+| Kate, Okular, KCalc, Krita | Same Qt/KDE Frameworks menu bar mechanism as Dolphin/Konsole. |
+| LibreOffice | Its own toolkit, but long-standing first-class AT-SPI accessibility support exposes a traditional menu bar the same way. |
+| Older GTK apps with a real menu bar (e.g. GIMP 2.x) | GTK's AT-SPI bridge exposes `GtkMenuBar` items with accelerators — the accelerator string needs parsing (GTK's format is different from Qt's), which is handled in `daemon/service.py`. |
+
+### Partially works
+
+| App | Why |
+| --- | --- |
+| Firefox | Flatpak sandboxing breaks the usual pid-based window match (falls back to a looser name match — see Known Limitations). On top of that, each submenu's items only populate in the accessible tree after you've opened that specific submenu at least once in the running session — shortcuts in menus you haven't opened yet won't show up until you do. |
+
+### Won't work
+
+| App | Why |
+| --- | --- |
+| VS Code | Verified. Electron — renders its own menu as web content; there's no native menu widget for anything to introspect, AT-SPI or otherwise. |
+| Obsidian | Verified. Same reason — Electron. |
+| Discord, Slack, Microsoft Teams, Spotify | Same Electron/Chromium-embedded pattern as VS Code and Obsidian. |
+| GNOME Text Editor, Nautilus (Files) | Same modern GTK4 "libadwaita" header-bar-only design as Baobab (verified) — no traditional menu bar for AT-SPI to expose at all. |
+| Steam | Custom-rendered UI, not built with any standard accessible toolkit. |
+
 ## A note on enabling accessibility
 
 Don't set `kwriteconfig6 --file kaccessrc --group ScreenReader --key Enabled
