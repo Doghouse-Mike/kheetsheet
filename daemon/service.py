@@ -65,13 +65,26 @@ def ensure_kwin_script_loaded():
     # KWin doesn't reliably auto-load an installed+enabled script at its own
     # startup (confirmed: still false after a full reboot) - so the daemon,
     # which does run fresh every login, loads it itself instead of relying
-    # on that.
+    # on that. Always (re)load rather than skipping when already loaded: the
+    # script reports the current window once, immediately, as it starts - if
+    # that already happened before this particular daemon process claimed
+    # its D-Bus name (e.g. install.sh's own load happening just before the
+    # daemon restart it triggers), skipping the reload here would mean this
+    # daemon never receives that one-time report and shows "no active
+    # window known" until the next real focus change.
     bus = dbus.SessionBus()
     scripting = dbus.Interface(
         bus.get_object("org.kde.KWin", "/Scripting"), "org.kde.kwin.Scripting"
     )
-    if bool(scripting.isScriptLoaded(KWIN_SCRIPT_ID)):
-        return
+
+    # loadScript is idempotent when the pluginName is already loaded - it
+    # returns the existing instance without re-running its top-level code,
+    # so the "report the current window right now" line never fires again.
+    # Explicitly unloading first forces a genuinely fresh instance.
+    try:
+        scripting.unloadScript(KWIN_SCRIPT_ID)
+    except Exception:
+        pass
 
     data_home = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
     script_path = os.path.join(
