@@ -99,7 +99,10 @@ at the end and name the old directory, since that one's now safe to delete.
 ## Usage
 
 Press your bound shortcut to show the current app's shortcuts; press it again
-(or Esc) to dismiss.
+(or Esc) to dismiss. You can also click any listed shortcut to run it directly
+— this invokes the app's actual command handler via AT-SPI's `Action`
+interface, the same mechanism a screen reader uses to activate something,
+rather than simulating a keypress. The overlay dismisses shortly after.
 
 ## Architecture
 

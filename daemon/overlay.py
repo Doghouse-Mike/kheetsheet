@@ -1,6 +1,6 @@
 from itertools import groupby
 
-from PyQt6.QtCore import QEvent, QRect, QSize, Qt
+from PyQt6.QtCore import QEvent, QRect, QSize, Qt, QTimer
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QWidget,
@@ -10,7 +10,15 @@ from PyQt6.QtWidgets import (
     QGridLayout,
     QGraphicsDropShadowEffect,
     QScrollArea,
+    QPushButton,
 )
+
+from service import invoke_shortcut
+
+# How long the pressed/highlighted state stays visible before the overlay
+# dismisses - long enough to register as deliberate feedback, short enough
+# to not feel like a delay.
+CLICK_FEEDBACK_MS = 150
 
 MAX_COLUMNS = 4
 MAX_SCREEN_FRACTION = 0.85
@@ -32,6 +40,12 @@ class KheetSheetOverlay(QWidget):
         self._container.setStyleSheet(
             "#container { background-color: rgba(20, 20, 20, 235); border-radius: 14px; }"
             "QLabel { color: #eeeeee; }"
+            "QPushButton#shortcutRow {"
+            "  background: transparent; border: none; border-radius: 6px;"
+            "  padding: 2px 4px; text-align: left;"
+            "}"
+            "QPushButton#shortcutRow:hover { background-color: rgba(255,255,255,25); }"
+            "QPushButton#shortcutRow:pressed { background-color: rgba(120,170,255,70); }"
         )
         shadow = QGraphicsDropShadowEffect(blurRadius=40, xOffset=0, yOffset=8)
         self._container.setGraphicsEffect(shadow)
@@ -132,21 +146,34 @@ class KheetSheetOverlay(QWidget):
         header.setFont(header_font)
         layout.addWidget(header)
 
-        for _, item_name, key_binding in items:
-            row = QHBoxLayout()
-            row.setSpacing(12)
+        for _, item_name, key_binding, accessible in items:
+            row = QPushButton()
+            row.setObjectName("shortcutRow")
+            row.setCursor(Qt.CursorShape.PointingHandCursor)
+            row.setFlat(True)
+
+            row_layout = QHBoxLayout()
+            row_layout.setContentsMargins(0, 0, 0, 0)
+            row_layout.setSpacing(12)
             key_label = QLabel(key_binding)
             key_label.setStyleSheet(
                 "background-color: rgba(255,255,255,30); border-radius: 4px;"
                 "padding: 1px 6px; font-family: monospace;"
             )
             name_label = QLabel(item_name)
-            row.addWidget(key_label)
-            row.addWidget(name_label)
-            row.addStretch()
-            layout.addLayout(row)
+            row_layout.addWidget(key_label)
+            row_layout.addWidget(name_label)
+            row_layout.addStretch()
+            row.setLayout(row_layout)
+
+            row.clicked.connect(lambda checked=False, acc=accessible: self._on_shortcut_clicked(acc))
+            layout.addWidget(row)
 
         return column
+
+    def _on_shortcut_clicked(self, accessible):
+        invoke_shortcut(accessible)
+        QTimer.singleShot(CLICK_FEEDBACK_MS, self.hide)
 
     def _clear_grid(self):
         while self._grid.count():

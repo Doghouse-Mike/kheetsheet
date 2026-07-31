@@ -150,7 +150,7 @@ def collect_shortcuts(app_node, max_depth=15):
             except Exception:
                 key_binding = None
             if key_binding:
-                shortcuts.append((group, name, key_binding))
+                shortcuts.append((group, name, key_binding, acc))
 
         try:
             child_count = acc.get_child_count()
@@ -201,6 +201,34 @@ def collect_shortcuts(app_node, max_depth=15):
 
     find_menu_bars(app_node, 0)
     return shortcuts
+
+
+_ACTIVATING_ACTION_NAMES = ("press", "click", "activate")
+
+
+def invoke_shortcut(accessible):
+    # Menu items consistently expose a single "Press" action in testing, but
+    # other widget types can expose several (e.g. a button with "SetFocus"
+    # at index 0 and "Press" at index 1) - searching by name rather than
+    # assuming index 0 is what actually triggers the item's real handler
+    # avoids just focusing something instead of activating it.
+    try:
+        count = accessible.get_n_actions()
+    except Exception:
+        return False
+    action_index = 0
+    for i in range(count):
+        try:
+            if accessible.get_action_name(i).lower() in _ACTIVATING_ACTION_NAMES:
+                action_index = i
+                break
+        except Exception:
+            continue
+    try:
+        accessible.do_action(action_index)
+        return True
+    except Exception:
+        return False
 
 
 def shortcuts_for_pid(pid, app_id=None):
