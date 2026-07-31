@@ -119,6 +119,32 @@ rather than simulating a keypress. The overlay dismisses shortly after.
 - **`install.sh`** — installs both of the above; the global shortcut is a
   manual step (see Install section).
 
+## Privacy and network access
+
+KheetSheet makes no network calls of any kind, and doesn't write logs, files,
+or any other record of what you've done. Everything it touches is local:
+
+- Shortcut data comes from AT-SPI's accessible tree of whatever app is
+  currently focused, held in memory only for as long as the overlay is open,
+  and never written to disk.
+- The only IPC involved (the KWin script notifying the daemon of the active
+  window, `kglobalaccel` triggering `Toggle`) is local D-Bus on your own
+  session bus — it never reaches outside the machine.
+- `install.sh` only uses your distro's package manager (`apt`/`rpm-ostree`)
+  for dependencies; there's no separate download step, no bundled telemetry
+  SDK, and no phone-home of any kind.
+- The installed systemd service (`systemd/kheetsheet-daemon.service`) sets
+  `RestrictAddressFamilies=AF_UNIX`, so the "no network calls" property isn't
+  just a claim about the current code — the kernel refuses any socket that
+  isn't `AF_UNIX` (the family D-Bus, AT-SPI, and the local X11 socket all use
+  anyway), so even a future bug can't make the daemon reach the network.
+- AT-SPI access is inherently broad — it's the same mechanism a screen reader
+  uses, so the daemon *can* see the menu structure of whatever app is
+  focused. KheetSheet only ever reads menu/shortcut names and key bindings to
+  render the overlay, and only for the currently active app; it doesn't
+  monitor keystrokes, read document content, or retain anything about apps
+  once you dismiss the overlay.
+
 ## Known limitations
 
 - Only apps that expose their menu via AT-SPI will show anything. Traditional

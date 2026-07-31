@@ -75,6 +75,25 @@ ExecStart=/usr/bin/python3 $PROJECT_DIR/daemon/__main__.py
 Restart=on-failure
 RestartSec=2
 
+# Hardening. Deliberately does NOT include PrivateTmp/ProtectHome/
+# ProtectSystem: those sandbox via mount namespaces and would hide either
+# /tmp/.X11-unix (the XWayland socket QT_QPA_PLATFORM=xcb connects to) or
+# /run/user/<uid> (the D-Bus session bus socket) or both, breaking the
+# daemon outright. Everything below only removes capabilities this daemon
+# has no legitimate use for, so it can't affect D-Bus, AT-SPI, or X11.
+NoNewPrivileges=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+ProtectHostname=true
+ProtectClock=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX
+
 [Install]
 WantedBy=graphical-session.target
 EOF
