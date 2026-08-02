@@ -14,6 +14,9 @@
   </description>
   <launchable type="desktop-id">io.github.DoghouseMike.KheetSheet.desktop</launchable>
   <url type="homepage">https://github.com/Doghouse-Mike/kheetsheet</url>
+  <developer id="io.github.doghouse-mike">
+    <name>Mike</name>
+  </developer>
   <content_rating type="oars-1.1" />
   <releases>
     <!-- PLACEHOLDER - fill in once there's a tagged release. -->

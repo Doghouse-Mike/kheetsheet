@@ -94,24 +94,40 @@ KWin's own benefit if it ever restarts independently.
   JSON API, not `flatpak-pip-generator`) rather than using
   `--share=network`.
 
+## Also resolved
+
+- **Switched the app module's source to `type: git`.** The previous
+  `type: dir, path: ..` only worked for local builds run *without*
+  `--sandbox` - Flathub's real build pipeline always uses `--sandbox`,
+  which forbids `..` traversal outside the manifest's own directory,
+  confirmed by hitting exactly that error locally. `url` is a local
+  `file://` path for now since nothing here is pushed to `origin/main`
+  yet - swap for the real `https://github.com/Doghouse-Mike/kheetsheet.git`
+  URL once it is. Verified the full manifest builds, installs, and runs
+  correctly under `--sandbox`.
+- **Validated `metainfo.xml`** with `appstreamcli validate` - passed
+  clean after adding a `<developer>` element (was flagged as
+  `developer-info-missing`, an info-level note but one Flathub review
+  does check for). The separate "No appstream data for app/... -
+  /files/share/app-info" warning that appears during local
+  `flatpak-builder --install` runs is unrelated to metainfo.xml
+  validity - it's about a composed AppStream catalog cache that
+  Flathub's own CI generates at the repo level, not something an
+  individual app build needs to embed itself.
+
 ## Still open
 
-- No icon file yet - `icon-placeholder.svg` is a stand-in.
-- The `kheetsheet` app module's source is `type: dir, path: ..`, which
-  only works because local builds were run *without* `--sandbox`.
-  Flathub's real build pipeline requires `--sandbox`, which forbids `..`
-  traversal outside the manifest's own directory - confirmed by hitting
-  exactly that error locally. Before submission this needs to become a
-  `type: git` source pointing at the pushed GitHub repo at a specific
-  commit, once these flatpak/ files are actually on `origin/main`.
+- No icon file yet - `icon-placeholder.svg` is a stand-in. This is the
+  one remaining thing before this could realistically go to Flathub.
 - PyQt6 built from source pulls in a lot of Qt6 addon modules
   (QtMultimedia, QtBluetooth, QtNfc, etc.) that KheetSheet doesn't use,
   because `org.kde.Sdk` has dev headers for most of them and
   PyQt-builder builds whatever it can find headers for. Not wrong, just
   bigger than strictly necessary.
-- No appstream data warning during export (cosmetic for local testing,
-  but Flathub requires valid appstream) - `metainfo.xml` hasn't been
-  validated with `appstream-util`/`appstreamcli compose`.
+- The `type: git` source's `url` needs to become the real GitHub URL
+  once these `flatpak/` files (and the daemon fixes) are pushed to
+  `origin/main` - not done yet, this whole session's work is local
+  commits only.
 - The kwin-script filesystem grant, kwinrc filesystem grant, KWin D-Bus
   talk-name, and Background portal permission are what a Flathub
   reviewer will ask to be justified - all now demonstrably necessary
@@ -119,5 +135,6 @@ KWin's own benefit if it ever restarts independently.
 
 ## Next concrete step
 
-Switch the app module to a `type: git` source and test with `--sandbox`
-(Flathub's actual build mode), then validate appstream metadata.
+Supply a real icon, then push to `origin/main` and update the git
+source's `url` to the real GitHub URL as the last step before an actual
+Flathub submission.
