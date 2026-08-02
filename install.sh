@@ -58,6 +58,13 @@ kwriteconfig6 --file kwinrc --group Plugins --key "${KWIN_SCRIPT_ID}Enabled" tru
 "$QDBUS_BIN" org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
 
 SCRIPT_MAIN_JS="$REAL_XDG_DATA_HOME/kwin/scripts/$KWIN_SCRIPT_ID/contents/code/main.js"
+# Unload any already-loaded instance under this same ID first (e.g. from a
+# previous run of this script) - confirmed the hard way that calling
+# loadScript while an instance with the same ID is already loaded can leave
+# KWin's script unloaded with no error surfaced, silently killing active-
+# window tracking until something happens to reload it. unloadScript
+# returning false just means nothing was loaded yet, which is fine.
+"$QDBUS_BIN" org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript "$KWIN_SCRIPT_ID" >/dev/null 2>&1 || true
 "$QDBUS_BIN" org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript "$SCRIPT_MAIN_JS" "$KWIN_SCRIPT_ID" >/dev/null 2>&1 || true
 "$QDBUS_BIN" org.kde.KWin /Scripting org.kde.kwin.Scripting.start >/dev/null 2>&1 || true
 

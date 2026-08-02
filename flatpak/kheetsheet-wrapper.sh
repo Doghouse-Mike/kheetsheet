@@ -51,6 +51,16 @@ mkdir -p "$(dirname "$KWIN_SCRIPT_DEST")"
 cp -r "$APP_LIB/kwin-script" "$KWIN_SCRIPT_DEST"
 
 SCRIPT_MAIN_JS="$KWIN_SCRIPT_DEST/contents/code/main.js"
+# Unload any already-loaded instance under this same ID first - this
+# script's loadScript runs on every launch (including every login via
+# Background portal autostart), and reloading over an already-loaded ID
+# was confirmed, live, to silently leave the script unloaded with no
+# error surfaced: the daemon kept running and answering D-Bus calls, but
+# never got another active-window update, so the overlay stuck on
+# whatever was focused at the last successful load. Given how often this
+# path runs for the Flatpak build specifically, skipping this would mean
+# hitting that same silent failure on essentially every relaunch.
+"$QDBUS_BIN" org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript "$KWIN_SCRIPT_ID" >/dev/null 2>&1 || true
 "$QDBUS_BIN" org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript "$SCRIPT_MAIN_JS" "$KWIN_SCRIPT_ID" >/dev/null 2>&1 || true
 "$QDBUS_BIN" org.kde.KWin /Scripting org.kde.kwin.Scripting.start >/dev/null 2>&1 || true
 
