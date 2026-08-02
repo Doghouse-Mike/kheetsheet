@@ -3,35 +3,39 @@ runtime: org.kde.Platform
 runtime-version: '6.11'
 sdk: org.kde.Sdk
 command: kheetsheet
+cleanup:
+  - /pybuild-tools
+  - /pyqt6-build-tools
+  - /include
 
-# --- DRAFT - building against real flatpak-builder now ------------------
-# org.kde.Sdk//6.11 confirmed to carry dbus-1.pc, glib-2.0.pc, cairo.pc,
-# gobject-introspection-1.0.pc, pkg-config, gcc, meson, and ninja - so
-# open item #2 from the original draft (whether the Sdk has the headers
-# to compile dbus-python/PyGObject/pycairo) is resolved: yes.
+# --- Builds and runs clean against real flatpak-builder --------------------
+# org.kde.Sdk//6.11 carries dbus-1.pc, glib-2.0.pc, cairo.pc,
+# gobject-introspection-1.0.pc, pkg-config, gcc, meson, and ninja.
+# dbus-python/pycairo/pygobject build from source against those, and
+# PyQt6 builds from source too (against the runtime's own Qt6, with
+# dbus-python present so it compiles the dbus.mainloop.pyqt6 glue
+# extension its PyPI wheel lacks - see the python3-pyqt6 module below).
+# All four build-time PEP517/setuptools_scm backends are vendored as
+# explicit sources rather than fetched at build time, so nothing here
+# needs --share=network.
 #
-# Sources/hashes below are pinned from PyPI's JSON API directly (not
+# Sources/hashes are pinned from PyPI's JSON API directly (not
 # flatpak-pip-generator - not fetching an external script's contents into
 # this build, and PyPI's own release metadata has the same sha256 info).
 # PyQt6-sip is pinned to the cp313 wheel specifically (not abi3) to match
 # org.kde.Platform//6.11's bundled Python 3.13 exactly.
 #
-# Known remaining issue: the pip build modules below run with
-# --share=network during build (see build-options), because dbus-python/
-# PyGObject/pycairo's Meson-based PEP517 build backends (meson-python
-# etc.) aren't vendored as sources here - this is fine for a local spike
-# build but Flathub review will reject network access during build, so
-# before submission these need to be replaced with fully vendored sources
-# (flatpak-pip-generator's normal job) or network disabled once it's
-# confirmed nothing beyond the backend packages themselves is fetched.
-#
-# Still open from the original draft:
-#   - PyQt6 bundles its own private Qt6 (see its module below) rather
-#     than linking the runtime's - works, but Flathub reviewers will
-#     likely ask about it.
+# Still open:
+#   - PyQt6 builds most of Qt6's addon modules (org.kde.Sdk has dev
+#     headers for nearly all of them), more than KheetSheet actually
+#     uses - not wrong, just bigger than necessary.
 #   - No icon file exists in the repo yet - icon/desktop-file/appdata
 #     below are placeholders.
-# --------------------------------------------------------------------------
+#   - The kheetsheet app module's source is still `type: dir, path: ..`,
+#     which only works for local builds run without --sandbox. Needs to
+#     become a `type: git` source before this could pass Flathub's real
+#     (always-sandboxed) build pipeline.
+# -----------------------------------------------------------------------
 
 finish-args:
   # XWayland socket - the daemon hardcodes QT_QPA_PLATFORM=xcb (see
@@ -55,19 +59,64 @@ finish-args:
   # to that one subdirectory rather than all of xdg-data.
   - --filesystem=xdg-data/kwin:create
 
+  # For persisting the KWin script's Enabled flag into kwinrc. Originally
+  # left out on the theory that the wrapper's own per-launch loadScript+
+  # start calls would cover the common case without needing this - real
+  # testing disproved that: without this, KWin reliably unloads the
+  # ad-hoc-loaded script within roughly a minute regardless of anything
+  # else, not just in some rare edge case. Scoped to the single file
+  # rather than all of xdg-config.
+  - --filesystem=xdg-config/kwinrc:create
+
   # kglobalaccel shortcut (System Settings -> Shortcuts) calls
   # `gdbus call --dest com.kheetsheet.Daemon ...` from the host, outside
   # the sandbox, straight to the session bus - reaches the app as long
   # as it owns that name, no extra finish-arg needed for that part.
 
 modules:
+  - name: python3-mesonpy-buildtools
+    buildsystem: simple
+    # Shared PEP517 build-backend for dbus-python/pycairo/pygobject
+    # (all three declare `build-backend = "mesonpy"`). meson/ninja/
+    # setuptools/wheel/packaging are all already present in
+    # org.kde.Sdk//6.11's own python3.13 site-packages (confirmed by
+    # listing them directly) - only meson-python itself and its small
+    # pyproject-metadata dependency are missing. Also needs `patchelf`
+    # on PATH - meson-python's own install/wheel-building step
+    # unconditionally shells out to it to fix RPATHs on every built .so,
+    # confirmed by hitting FileNotFoundError: 'patchelf' the first time
+    # network access was removed; not vendoring dbus-python.h or a
+    # header presence assumption, an actual invocation. Neither
+    # org.kde.Sdk nor org.freedesktop.Sdk carry a patchelf binary, but
+    # the `patchelf` PyPI package's wheel just bundles the prebuilt
+    # binary itself, which is far simpler than building the C++ project
+    # from source for a one-off build-time tool. All four installed to
+    # a throwaway prefix outside /app's real paths - stripped by the
+    # manifest-level `cleanup` list below.
+    build-commands:
+      - pip3 install --prefix=${FLATPAK_DEST}/pybuild-tools --no-deps
+          meson_python-0.20.0-py3-none-any.whl
+          pyproject_metadata-0.12.1-py3-none-any.whl
+          patchelf-0.17.2.4-py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.musllinux_1_1_x86_64.whl
+    sources:
+      - type: file
+        url: https://files.pythonhosted.org/packages/90/ad/77f9483e180cabab2772ac222aedd3dfab858e60d992f40414a3f08e7494/meson_python-0.20.0-py3-none-any.whl
+        sha256: 6a744cf0c09e76ecbdc58cfa374b48c8902dac1b74479628238634efbf36aec9
+      - type: file
+        url: https://files.pythonhosted.org/packages/b9/8e/d883718e872abc214ba053f60f7e6edc2abd5ffbd1544beb01a9c92ddd3c/pyproject_metadata-0.12.1-py3-none-any.whl
+        sha256: f7162d580a96386a8eb096da06215f981f547d1490f03055ef99e323bc2da427
+      - type: file
+        url: https://files.pythonhosted.org/packages/7e/19/f7821ef31aab01fa7dc8ebe697ece88ec4f7a0fdd3155dab2dfee4b00e5c/patchelf-0.17.2.4-py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.musllinux_1_1_x86_64.whl
+        sha256: d9b35ebfada70c02679ad036407d9724ffe1255122ba4ac5e4be5868618a5689
+
   - name: python3-dbus-python
     buildsystem: simple
-    build-options:
-      build-args:
-        - --share=network
     build-commands:
-      - pip3 install --prefix=${FLATPAK_DEST} --no-deps dbus-python-1.4.0.tar.gz
+      - >-
+        PATH=${FLATPAK_DEST}/pybuild-tools/bin:$PATH
+        PYTHONPATH=${FLATPAK_DEST}/pybuild-tools/lib/python3.13/site-packages
+        pip3 install --prefix=${FLATPAK_DEST} --no-build-isolation --no-deps
+        dbus-python-1.4.0.tar.gz
     sources:
       - type: file
         url: https://files.pythonhosted.org/packages/ff/24/63118050c7dd7be04b1ccd60eab53fef00abe844442e1b6dec92dae505d6/dbus-python-1.4.0.tar.gz
@@ -75,11 +124,12 @@ modules:
 
   - name: python3-pycairo
     buildsystem: simple
-    build-options:
-      build-args:
-        - --share=network
     build-commands:
-      - pip3 install --prefix=${FLATPAK_DEST} --no-deps pycairo-1.29.0.tar.gz
+      - >-
+        PATH=${FLATPAK_DEST}/pybuild-tools/bin:$PATH
+        PYTHONPATH=${FLATPAK_DEST}/pybuild-tools/lib/python3.13/site-packages
+        pip3 install --prefix=${FLATPAK_DEST} --no-build-isolation --no-deps
+        pycairo-1.29.0.tar.gz
     sources:
       - type: file
         url: https://files.pythonhosted.org/packages/22/d9/1728840a22a4ef8a8f479b9156aa2943cd98c3907accd3849fb0d5f82bfd/pycairo-1.29.0.tar.gz
@@ -87,11 +137,12 @@ modules:
 
   - name: python3-pygobject
     buildsystem: simple
-    build-options:
-      build-args:
-        - --share=network
     build-commands:
-      - pip3 install --prefix=${FLATPAK_DEST} --no-deps pygobject-3.56.3.tar.gz
+      - >-
+        PATH=${FLATPAK_DEST}/pybuild-tools/bin:$PATH
+        PYTHONPATH=${FLATPAK_DEST}/pybuild-tools/lib/python3.13/site-packages
+        pip3 install --prefix=${FLATPAK_DEST} --no-build-isolation --no-deps
+        pygobject-3.56.3.tar.gz
     sources:
       - type: file
         url: https://files.pythonhosted.org/packages/da/61/978c5fbca34f10a90df362502fbb5a005637909e7b5a0e9212349ea9d010/pygobject-3.56.3.tar.gz
@@ -113,9 +164,6 @@ modules:
 
   - name: python3-pyqt6
     buildsystem: simple
-    build-options:
-      build-args:
-        - --share=network
     # Built from source against org.kde.Sdk's own Qt6 (not PyPI's binary
     # wheel, which bundles a private Qt6 AND lacks the dbus.mainloop.pyqt6
     # extension entirely - see NOTES.md "Current blocker"). Turns out
@@ -137,8 +185,18 @@ modules:
     # --dbus points sip-build at dbus-python's header, which its own
     # PyPI wheel installs to a non-standard path (not found by the
     # default pkg-config search PyQt6's build does for libdbus itself).
+    # sip/PyQt-builder's own build-system.requires needs setuptools_scm
+    # (already-present setuptools>=77 covers the rest) - installed first,
+    # separately, so it's importable when sip/PyQt-builder's own build
+    # runs, same reasoning as the mesonpy-buildtools module above.
     build-commands:
-      - pip3 install --prefix=${FLATPAK_DEST}/pyqt6-build-tools sip-6.15.3.tar.gz pyqt_builder-1.19.1.tar.gz
+      - pip3 install --prefix=${FLATPAK_DEST}/pyqt6-build-tools --no-deps
+          setuptools_scm-10.2.1-py3-none-any.whl
+          vcs_versioning-2.2.3-py3-none-any.whl
+      - >-
+        PYTHONPATH=${FLATPAK_DEST}/pyqt6-build-tools/lib/python3.13/site-packages
+        pip3 install --prefix=${FLATPAK_DEST}/pyqt6-build-tools --no-build-isolation --no-deps
+        sip-6.15.3.tar.gz pyqt_builder-1.19.1.tar.gz
       - tar xzf pyqt6-6.11.0.tar.gz
       - >-
         cd pyqt6-6.11.0 &&
@@ -154,7 +212,6 @@ modules:
         PATH=${FLATPAK_DEST}/pyqt6-build-tools/bin:$PATH
         PYTHONPATH=${FLATPAK_DEST}/pyqt6-build-tools/lib/python3.13/site-packages
         make install
-      - rm -rf ${FLATPAK_DEST}/pyqt6-build-tools
     sources:
       - type: file
         url: https://files.pythonhosted.org/packages/02/b1/79bff1c49a9e19ffe0211cb8905cc514c3f6b8f3f7ae55a40403d346c076/sip-6.15.3.tar.gz
@@ -162,6 +219,12 @@ modules:
       - type: file
         url: https://files.pythonhosted.org/packages/61/f6/f3b504b4d55a7c4d3393cb90378501f1f5fc7f233bd85c0375674f84d2af/pyqt_builder-1.19.1.tar.gz
         sha256: 6af6646ba29668751b039bfdced51642cb510e300796b58a4d68b7f956a024d8
+      - type: file
+        url: https://files.pythonhosted.org/packages/c3/b4/02ac1d9833b882c87b3a4e82703e70eac4ab33d0d15fb123e60bb01f3bc1/setuptools_scm-10.2.1-py3-none-any.whl
+        sha256: b7c82f4102d389ee57dc66ccdb4f9b4bca3c40ba83b43f1f63d68ccd72db2580
+      - type: file
+        url: https://files.pythonhosted.org/packages/95/2e/83be70d0379bbe17034e5d5960fae2a23cc136d466786607d2615ac2612b/vcs_versioning-2.2.3-py3-none-any.whl
+        sha256: 4f7873af76f5cc24e701608354f376f5eb70b317d663787ace57a7edd7a27506
       - type: file
         url: https://files.pythonhosted.org/packages/8b/47/b25c13eca5bebc6505394d0223e46d7ebf0c57dcac2ed908d7d19b18ab6b/pyqt6-6.11.0.tar.gz
         sha256: 45dd60aa69976de1918b5ced6b4e7b6a25abd2a919ecef5fd5826ecc76718889

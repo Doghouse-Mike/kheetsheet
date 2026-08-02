@@ -86,10 +86,23 @@ def ensure_kwin_script_loaded():
     except Exception:
         pass
 
-    data_home = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+    # Inside a Flatpak sandbox, $XDG_DATA_HOME is redirected to this app's
+    # private ~/.var/app/<id>/data - not the real host path the
+    # --filesystem=xdg-data/kwin:create grant exposes, which is where the
+    # wrapper actually placed the script files. Trusting the ambient
+    # XDG_DATA_HOME here silently pointed loadScript at a path that never
+    # existed - it "succeeded" (returned a valid-looking id) without ever
+    # loading real code, which is what looked like the script mysteriously
+    # going unloaded sometime after startup. /.flatpak-info existing is the
+    # standard way to detect running inside a Flatpak sandbox at all.
+    if os.path.exists("/.flatpak-info"):
+        data_home = os.path.expanduser("~/.local/share")
+    else:
+        data_home = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
     script_path = os.path.join(
         data_home, "kwin", "scripts", KWIN_SCRIPT_ID, "contents", "code", "main.js"
     )
+
     # dbus-python's high-level Interface proxy resolves overloaded Qt methods
     # to whichever signature the introspection XML lists first, regardless of
     # how many arguments are actually passed - get_dbus_method + an explicit

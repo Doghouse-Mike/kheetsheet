@@ -19,15 +19,21 @@
 #     install.sh does on the host side, this script uses
 #     $HOME/.local/share directly for the one path that needs to land
 #     in the real, granted location.
-#   - Deliberately does NOT also run install.sh's kwriteconfig6 step to
-#     persist Enabled=true into kwinrc: that would need a third
-#     non-default permission (kwinrc lives under xdg-config, not the
-#     xdg-data/kwin path already granted) just to cover the edge case of
-#     KWin restarting independently mid-session without the app also
-#     restarting. The loadScript+start D-Bus calls below already run on
-#     every app launch, which happens on every login via the Background
-#     portal autostart - that covers the common case without asking for
-#     more than the KWin D-Bus/filesystem access already justified.
+#   - Originally skipped install.sh's kwriteconfig6 step (persisting
+#     Enabled=true into kwinrc), on the theory that per-launch
+#     loadScript+start already covered the common case and the flag was
+#     only needed for the rare case of KWin restarting independently
+#     mid-session. Added it back partway through investigating the real
+#     bug below, suspecting it might be the cause - it wasn't (the
+#     tests that seemed to implicate it were actually just hitting the
+#     real bug regardless of this flag), but it's low-cost correct
+#     coverage for that narrow restart case regardless, so left it in.
+#     Needs its own --filesystem=xdg-config/kwinrc:create grant (kwinrc
+#     isn't under the xdg-data/kwin path already granted) and, like the
+#     KWin script path itself, $XDG_CONFIG_HOME is redirected inside the
+#     sandbox to the app's private ~/.var/app/<id>/config - so this
+#     overrides it to the real $HOME/.config for this one call, same
+#     pattern as XDG_DATA_HOME below.
 #   - RequestBackground's real response arrives async via a Response
 #     signal on the returned request handle, not the initial method
 #     return. gdbus has no clean "block until this signal fires"
@@ -37,38 +43,40 @@
 #     flaky in practice, redo this in Python with python-gi (PyGObject
 #     is already a build dependency) using GLib's portal helpers
 #     properly instead of hand-rolled D-Bus over bash.
+#   - Stopped calling loadScript/start/reconfigure here at all - the
+#     daemon's own service.py already does unloadScript+loadScript+start
+#     once at its own startup (ensure_kwin_script_loaded(), by design -
+#     see its comment - because KWin doesn't reliably auto-load an
+#     enabled script on its own), so this wrapper doing the same thing
+#     too was pure duplication. This turned out NOT to be the cause of
+#     the real bug described below, but having exactly one place own
+#     script loading is simpler regardless, so left it removed.
+#   - THE ACTUAL BUG, found after a long investigation (isScriptLoaded
+#     kept reporting false sometime after every launch, with no error
+#     anywhere): service.py's ensure_kwin_script_loaded() computed the
+#     script's path from os.environ["XDG_DATA_HOME"] - which inside the
+#     sandbox is redirected to this app's private
+#     ~/.var/app/<id>/data, not the real host path this wrapper actually
+#     copies the script files to (via the --filesystem grant). loadScript
+#     on that nonexistent path returned a valid-looking id and "start()"
+#     didn't error either - it just silently loaded nothing, which is
+#     what looked like the script mysteriously going unloaded after the
+#     fact. Fixed in service.py by detecting /.flatpak-info and using
+#     $HOME/.local/share directly in that case, same as this wrapper
+#     already does for its own file copy below.
 set -euo pipefail
 
 KWIN_SCRIPT_ID="kheetsheet-activewindow"
 APP_LIB="/app/lib/kheetsheet"
-QDBUS_BIN="qdbus"
 REAL_XDG_DATA_HOME="$HOME/.local/share"
-
-echo "==> Installing/refreshing KWin active-window watcher script..."
-KWIN_SCRIPT_DEST="$REAL_XDG_DATA_HOME/kwin/scripts/$KWIN_SCRIPT_ID"
-rm -rf "$KWIN_SCRIPT_DEST"
-mkdir -p "$(dirname "$KWIN_SCRIPT_DEST")"
-cp -r "$APP_LIB/kwin-script" "$KWIN_SCRIPT_DEST"
-
-SCRIPT_MAIN_JS="$KWIN_SCRIPT_DEST/contents/code/main.js"
-# Unload any already-loaded instance under this same ID first - this
-# script's loadScript runs on every launch (including every login via
-# Background portal autostart), and reloading over an already-loaded ID
-# was confirmed, live, to silently leave the script unloaded with no
-# error surfaced: the daemon kept running and answering D-Bus calls, but
-# never got another active-window update, so the overlay stuck on
-# whatever was focused at the last successful load. Given how often this
-# path runs for the Flatpak build specifically, skipping this would mean
-# hitting that same silent failure on essentially every relaunch.
-"$QDBUS_BIN" org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript "$KWIN_SCRIPT_ID" >/dev/null 2>&1 || true
-"$QDBUS_BIN" org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript "$SCRIPT_MAIN_JS" "$KWIN_SCRIPT_ID" >/dev/null 2>&1 || true
-"$QDBUS_BIN" org.kde.KWin /Scripting org.kde.kwin.Scripting.start >/dev/null 2>&1 || true
+REAL_XDG_CONFIG_HOME="$HOME/.config"
 
 # Ask the Background portal for permission to run on login, replacing
 # the systemd user service used in the non-Flatpak install. First run
 # surfaces a one-time consent dialog (xdg-desktop-portal-kde) - this is
 # a real, visible UX change from the old silent `systemctl enable`, not
-# a bug.
+# a bug. Deliberately runs before the KWin script load below - see the
+# race-condition note above.
 echo "==> Requesting background/autostart permission..."
 REQUEST_PATH=$(gdbus call --session \
   --dest org.freedesktop.portal.Desktop \
@@ -81,6 +89,17 @@ if [ -n "$REQUEST_PATH" ]; then
   timeout 30 gdbus monitor --session --dest org.freedesktop.portal.Desktop 2>/dev/null \
     | grep -m1 -F "$REQUEST_PATH: org.freedesktop.portal.Request.Response" || true
 fi
+
+echo "==> Installing/refreshing KWin active-window watcher script..."
+KWIN_SCRIPT_DEST="$REAL_XDG_DATA_HOME/kwin/scripts/$KWIN_SCRIPT_ID"
+rm -rf "$KWIN_SCRIPT_DEST"
+mkdir -p "$(dirname "$KWIN_SCRIPT_DEST")"
+cp -r "$APP_LIB/kwin-script" "$KWIN_SCRIPT_DEST"
+
+# Persist Enabled=true into kwinrc for KWin's own benefit if it ever
+# restarts independently - actual (re)loading is left entirely to the
+# daemon's own startup logic, see the note above.
+XDG_CONFIG_HOME="$REAL_XDG_CONFIG_HOME" kwriteconfig6 --file kwinrc --group Plugins --key "${KWIN_SCRIPT_ID}Enabled" true
 
 echo "==> Starting daemon..."
 export QT_QPA_PLATFORM=xcb
