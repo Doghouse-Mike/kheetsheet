@@ -2,13 +2,32 @@
 # Flatpak entry point. Runs inside the sandbox on every launch (and on
 # every login, once autostarted via the Background portal below).
 #
-# DRAFT / UNTESTED - written from reading install.sh and the runtime's
-# installed binaries, not yet run inside an actual built Flatpak. Two
-# pieces in particular need verification against a real sandbox:
-#   - The kpackagetool6/kwriteconfig6/qdbus sequence mirrors install.sh,
-#     confirmed those three binaries exist in org.kde.Platform//6.11,
-#     but not yet confirmed they succeed when *run from inside* the
-#     sandbox against the --filesystem=xdg-data/kwin:create grant.
+# Built and run once against a real Flatpak (org.kde.Platform//6.11).
+# What that run found and fixed:
+#   - kpackagetool6 IS present in the runtime, but its "KWin/Script"
+#     package-structure plugin is NOT - that plugin ships as part of
+#     KWin itself (the host compositor package), not the generic app
+#     runtime, so `kpackagetool6 --type KWin/Script -i ...` fails inside
+#     the sandbox with "Package type 'KWin/Script' not found" even
+#     though the binary runs fine. A KWin script is just plain files
+#     (metadata.json + contents/code/main.js) with no compile step, so
+#     the fix below is a plain `cp -r` instead of going through
+#     kpackagetool6 at all.
+#   - Inside the sandbox $XDG_DATA_HOME is redirected to the app's
+#     private ~/.var/app/<id>/data, not the real host path the
+#     --filesystem=xdg-data/kwin:create grant exposes - so, like
+#     install.sh does on the host side, this script uses
+#     $HOME/.local/share directly for the one path that needs to land
+#     in the real, granted location.
+#   - Deliberately does NOT also run install.sh's kwriteconfig6 step to
+#     persist Enabled=true into kwinrc: that would need a third
+#     non-default permission (kwinrc lives under xdg-config, not the
+#     xdg-data/kwin path already granted) just to cover the edge case of
+#     KWin restarting independently mid-session without the app also
+#     restarting. The loadScript+start D-Bus calls below already run on
+#     every app launch, which happens on every login via the Background
+#     portal autostart - that covers the common case without asking for
+#     more than the KWin D-Bus/filesystem access already justified.
 #   - RequestBackground's real response arrives async via a Response
 #     signal on the returned request handle, not the initial method
 #     return. gdbus has no clean "block until this signal fires"
@@ -23,14 +42,15 @@ set -euo pipefail
 KWIN_SCRIPT_ID="kheetsheet-activewindow"
 APP_LIB="/app/lib/kheetsheet"
 QDBUS_BIN="qdbus"
+REAL_XDG_DATA_HOME="$HOME/.local/share"
 
 echo "==> Installing/refreshing KWin active-window watcher script..."
-rm -rf "$XDG_DATA_HOME/kwin/scripts/$KWIN_SCRIPT_ID"
-kpackagetool6 --type KWin/Script -i "$APP_LIB/kwin-script"
-kwriteconfig6 --file kwinrc --group Plugins --key "${KWIN_SCRIPT_ID}Enabled" true
-"$QDBUS_BIN" org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
+KWIN_SCRIPT_DEST="$REAL_XDG_DATA_HOME/kwin/scripts/$KWIN_SCRIPT_ID"
+rm -rf "$KWIN_SCRIPT_DEST"
+mkdir -p "$(dirname "$KWIN_SCRIPT_DEST")"
+cp -r "$APP_LIB/kwin-script" "$KWIN_SCRIPT_DEST"
 
-SCRIPT_MAIN_JS="$XDG_DATA_HOME/kwin/scripts/$KWIN_SCRIPT_ID/contents/code/main.js"
+SCRIPT_MAIN_JS="$KWIN_SCRIPT_DEST/contents/code/main.js"
 "$QDBUS_BIN" org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript "$SCRIPT_MAIN_JS" "$KWIN_SCRIPT_ID" >/dev/null 2>&1 || true
 "$QDBUS_BIN" org.kde.KWin /Scripting org.kde.kwin.Scripting.start >/dev/null 2>&1 || true
 

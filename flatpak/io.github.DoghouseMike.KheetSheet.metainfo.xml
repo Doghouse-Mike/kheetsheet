@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.Doghouse-Mike.KheetSheet</id>
+  <id>io.github.DoghouseMike.KheetSheet</id>
   <name>KheetSheet</name>
   <summary>Keyboard shortcut overlay for the app you're currently using</summary>
   <metadata_license>CC0-1.0</metadata_license>
@@ -12,7 +12,7 @@
       you press a global shortcut.
     </p>
   </description>
-  <launchable type="desktop-id">io.github.Doghouse-Mike.KheetSheet.desktop</launchable>
+  <launchable type="desktop-id">io.github.DoghouseMike.KheetSheet.desktop</launchable>
   <url type="homepage">https://github.com/Doghouse-Mike/kheetsheet</url>
   <content_rating type="oars-1.1" />
   <releases>

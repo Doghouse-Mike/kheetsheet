@@ -1,0 +1,143 @@
+id: io.github.DoghouseMike.KheetSheet
+runtime: org.kde.Platform
+runtime-version: '6.11'
+sdk: org.kde.Sdk
+command: kheetsheet
+
+# --- DRAFT - building against real flatpak-builder now ------------------
+# org.kde.Sdk//6.11 confirmed to carry dbus-1.pc, glib-2.0.pc, cairo.pc,
+# gobject-introspection-1.0.pc, pkg-config, gcc, meson, and ninja - so
+# open item #2 from the original draft (whether the Sdk has the headers
+# to compile dbus-python/PyGObject/pycairo) is resolved: yes.
+#
+# Sources/hashes below are pinned from PyPI's JSON API directly (not
+# flatpak-pip-generator - not fetching an external script's contents into
+# this build, and PyPI's own release metadata has the same sha256 info).
+# PyQt6-sip is pinned to the cp313 wheel specifically (not abi3) to match
+# org.kde.Platform//6.11's bundled Python 3.13 exactly.
+#
+# Known remaining issue: the pip build modules below run with
+# --share=network during build (see build-options), because dbus-python/
+# PyGObject/pycairo's Meson-based PEP517 build backends (meson-python
+# etc.) aren't vendored as sources here - this is fine for a local spike
+# build but Flathub review will reject network access during build, so
+# before submission these need to be replaced with fully vendored sources
+# (flatpak-pip-generator's normal job) or network disabled once it's
+# confirmed nothing beyond the backend packages themselves is fetched.
+#
+# Still open from the original draft:
+#   - PyQt6 bundles its own private Qt6 (see its module below) rather
+#     than linking the runtime's - works, but Flathub reviewers will
+#     likely ask about it.
+#   - No icon file exists in the repo yet - icon/desktop-file/appdata
+#     below are placeholders.
+# --------------------------------------------------------------------------
+
+finish-args:
+  # XWayland socket - the daemon hardcodes QT_QPA_PLATFORM=xcb (see
+  # kheetsheet-daemon.service) because it talks to /tmp/.X11-unix
+  # directly, not because it can't run under native Wayland.
+  - --socket=x11
+  - --socket=session-bus
+
+  # AT-SPI cross-app querying needs no explicit flag - Flatpak grants
+  # --a11y-bus by default for normal apps (only its --sandbox testing
+  # mode disables it). Confirmed empirically in the bwrap spike: a
+  # fully isolated sandbox could enumerate all running AT-SPI apps on
+  # the real desktop.
+  #
+  # KWin's D-Bus interface, on the other hand, IS restricted by
+  # default (ServiceUnknown until granted) - this is the one
+  # non-default permission a Flathub reviewer will ask about.
+  - --talk-name=org.kde.KWin
+
+  # For copying the KWin script into ~/.local/share/kwin/scripts. Scoped
+  # to that one subdirectory rather than all of xdg-data.
+  - --filesystem=xdg-data/kwin:create
+
+  # kglobalaccel shortcut (System Settings -> Shortcuts) calls
+  # `gdbus call --dest com.kheetsheet.Daemon ...` from the host, outside
+  # the sandbox, straight to the session bus - reaches the app as long
+  # as it owns that name, no extra finish-arg needed for that part.
+
+modules:
+  - name: python3-dbus-python
+    buildsystem: simple
+    build-options:
+      build-args:
+        - --share=network
+    build-commands:
+      - pip3 install --prefix=${FLATPAK_DEST} --no-deps dbus-python-1.4.0.tar.gz
+    sources:
+      - type: file
+        url: https://files.pythonhosted.org/packages/ff/24/63118050c7dd7be04b1ccd60eab53fef00abe844442e1b6dec92dae505d6/dbus-python-1.4.0.tar.gz
+        sha256: 991666e498f60dbf3e49b8b7678f5559b8a65034fdf61aae62cdecdb7d89c770
+
+  - name: python3-pycairo
+    buildsystem: simple
+    build-options:
+      build-args:
+        - --share=network
+    build-commands:
+      - pip3 install --prefix=${FLATPAK_DEST} --no-deps pycairo-1.29.0.tar.gz
+    sources:
+      - type: file
+        url: https://files.pythonhosted.org/packages/22/d9/1728840a22a4ef8a8f479b9156aa2943cd98c3907accd3849fb0d5f82bfd/pycairo-1.29.0.tar.gz
+        sha256: f3f7fde97325cae80224c09f12564ef58d0d0f655da0e3b040f5807bd5bd3142
+
+  - name: python3-pygobject
+    buildsystem: simple
+    build-options:
+      build-args:
+        - --share=network
+    build-commands:
+      - pip3 install --prefix=${FLATPAK_DEST} --no-deps pygobject-3.56.3.tar.gz
+    sources:
+      - type: file
+        url: https://files.pythonhosted.org/packages/da/61/978c5fbca34f10a90df362502fbb5a005637909e7b5a0e9212349ea9d010/pygobject-3.56.3.tar.gz
+        sha256: 12760e4a0e3d04b6eb95e06f7a27e362c826d567ea613373a92c003b6c70d2d6
+
+  - name: python3-pyqt6
+    buildsystem: simple
+    # Binary wheels - bundle their own private Qt6 rather than linking
+    # the runtime's. See open item above. PyQt6-sip is pinned to cp313
+    # specifically (not an abi3 wheel) to match the runtime's bundled
+    # Python 3.13 exactly.
+    build-commands:
+      - pip3 install --prefix=${FLATPAK_DEST} --no-deps
+          pyqt6_sip-13.11.1-cp313-cp313-manylinux1_x86_64.manylinux_2_5_x86_64.whl
+          pyqt6_qt6-6.11.1-py3-none-manylinux_2_34_x86_64.whl
+          pyqt6-6.11.0-cp310-abi3-manylinux_2_34_x86_64.whl
+    sources:
+      - type: file
+        url: https://files.pythonhosted.org/packages/d4/e3/65b605759859d38231ce7544065d4c61f891eb7766c351318e2a0b08a473/pyqt6_sip-13.11.1-cp313-cp313-manylinux1_x86_64.manylinux_2_5_x86_64.whl
+        sha256: a72f4ebdab16a8a484019ff593de90d8013d3286b678c6ba1c0bdb117f4fcb13
+      - type: file
+        url: https://files.pythonhosted.org/packages/e1/be/21d0df9bde717131f4245f8801676120d466afe198c4641c9e4982cf85fe/pyqt6_qt6-6.11.1-py3-none-manylinux_2_34_x86_64.whl
+        sha256: 254af349e0ef4b2fa581f86ee9d65eb797bb1d4f0c01ae5ceaa7b2446b458be9
+      - type: file
+        url: https://files.pythonhosted.org/packages/c3/a0/bd1399740dfa80c0a94d20b02d89962a31458233dcf70eaa09bfbccf3d0f/pyqt6-6.11.0-cp310-abi3-manylinux_2_34_x86_64.whl
+        sha256: 8555277989fa7d114cb3c3443fd261d566909f7268ceedd41d93a5f02d37ec05
+
+  - name: kheetsheet
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 daemon/__main__.py /app/lib/kheetsheet/daemon/__main__.py
+      - install -Dm644 daemon/overlay.py /app/lib/kheetsheet/daemon/overlay.py
+      - install -Dm644 daemon/service.py /app/lib/kheetsheet/daemon/service.py
+      - install -Dm755 flatpak/kheetsheet-wrapper.sh /app/bin/kheetsheet
+      # kwin-script ships inside the app; the wrapper below installs it
+      # into the granted xdg-data/kwin path on first run.
+      - cp -r kwin-script /app/lib/kheetsheet/kwin-script
+      - install -Dm644 flatpak/io.github.DoghouseMike.KheetSheet.desktop \
+          /app/share/applications/io.github.DoghouseMike.KheetSheet.desktop
+      - install -Dm644 flatpak/io.github.DoghouseMike.KheetSheet.metainfo.xml \
+          /app/share/metainfo/io.github.DoghouseMike.KheetSheet.metainfo.xml
+      # PLACEHOLDER - no icon file exists in the repo yet.
+      - install -Dm644 flatpak/icon-placeholder.svg \
+          /app/share/icons/hicolor/scalable/apps/io.github.DoghouseMike.KheetSheet.svg
+    sources:
+      - type: dir
+        path: ..
+        skip:
+          - .git
