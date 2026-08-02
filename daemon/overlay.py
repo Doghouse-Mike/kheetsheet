@@ -7,7 +7,6 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
-    QGridLayout,
     QGraphicsDropShadowEffect,
     QScrollArea,
     QFrame,
@@ -20,8 +19,19 @@ from service import invoke_shortcut
 # to not feel like a delay.
 CLICK_FEEDBACK_MS = 150
 
-MAX_COLUMNS = 4
 MAX_SCREEN_FRACTION = 0.85
+GROUP_SPACING = 36
+ROW_SPACING = 10
+# Hard cap on a single group's width, with word-wrap on its item names, so
+# one long menu name can't blow out a row's width and force the horizontal
+# scrolling this whole layout exists to avoid.
+MAX_COLUMN_WIDTH = 320
+# Covers the outer window margins (24px each side), the container's inner
+# margins (28px each side), and a vertical scrollbar's width - all chrome
+# between the popup's outer edge and where a row actually gets to draw,
+# reserved up front so a row that measures as "just fits" doesn't get
+# clipped once that chrome and a scrollbar are actually in place.
+CHROME_WIDTH_BUFFER = 130
 
 
 class ShortcutRow(QFrame):
@@ -99,17 +109,23 @@ class KheetSheetOverlay(QWidget):
         self._layout.addWidget(self._title)
 
         self._grid_holder = QWidget()
-        self._grid = QGridLayout(self._grid_holder)
-        self._grid.setHorizontalSpacing(36)
-        self._grid.setVerticalSpacing(10)
+        self._rows_layout = QVBoxLayout(self._grid_holder)
+        self._rows_layout.setContentsMargins(0, 0, 0, 0)
+        self._rows_layout.setSpacing(ROW_SPACING)
 
         # Long shortcut lists/labels can exceed the screen in either
         # dimension - scrolling (rather than an unbounded popup) is what
         # keeps this usable regardless of how much a given app exposes.
+        # Horizontal scrolling is disabled outright: groups are shelf-packed
+        # left-to-right into rows that wrap once the next one wouldn't fit
+        # (see _pack_columns_into_rows), so there's never content off to the
+        # side - only further down, which the vertical scrollbar covers.
         self._scroll = QScrollArea(self._container)
         self._scroll.setWidget(self._grid_holder)
         self._scroll.setWidgetResizable(False)
         self._scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._scroll.setStyleSheet("background: transparent;")
         self._scroll.viewport().setStyleSheet("background: transparent;")
         self._layout.addWidget(self._scroll)
@@ -127,24 +143,37 @@ class KheetSheetOverlay(QWidget):
         # that. The scroll area's own sizeHint() also doesn't propagate to
         # the window's layout on its own - updateGeometry() forces that.
         self._scroll.takeWidget()
-        self._clear_grid()
+        self._clear_rows()
+
+        max_size = self._max_popup_size()
+        available_width = max_size.width() - CHROME_WIDTH_BUFFER
 
         if not shortcuts:
             empty = QLabel(
                 "No AT-SPI-exposed shortcuts found for this application.\n"
                 "GTK app? Try Ctrl+? — many bind their own shortcuts window to it."
             )
-            self._grid.addWidget(empty, 0, 0)
+            empty.setWordWrap(True)
+            self._rows_layout.addWidget(empty)
         else:
             groups = [(g, list(items)) for g, items in groupby(shortcuts, key=lambda s: s[0])]
-            for col, (group_name, items) in enumerate(groups):
-                row = col // MAX_COLUMNS
-                grid_col = col % MAX_COLUMNS
-                column_widget = self._build_column(group_name, items)
-                self._grid.addWidget(column_widget, row, grid_col, Qt.AlignmentFlag.AlignTop)
+            columns = [self._build_column(name, items) for name, items in groups]
+            self._pack_columns_into_rows(columns, available_width)
 
+        # Clamping the holder's width (rather than just relying on the rows
+        # already fitting) keeps adjustSize() from measuring a width wider
+        # than what we actually packed for, which is what would otherwise
+        # let a horizontal scrollbar sneak back in.
+        self._grid_holder.setMaximumWidth(available_width)
         self._grid_holder.adjustSize()
         self._scroll.setWidget(self._grid_holder)
+        # QScrollArea's own sizeHint() under-reports its needed width here -
+        # even in the original grid-based layout, it settled narrower than
+        # the widget it was given, silently relying on a horizontal
+        # scrollbar to reach the rest. Forcing a minimum width explicitly is
+        # what actually makes the container/window grow to match the real
+        # content instead of leaving it clipped now that scrollbar is gone.
+        self._scroll.setMinimumWidth(self._grid_holder.width())
         self._scroll.updateGeometry()
         self._container.updateGeometry()
 
@@ -152,7 +181,7 @@ class KheetSheetOverlay(QWidget):
         # clamp to that; the layout shrinks the (flexible) scroll area to
         # make room rather than the title, so long lists scroll instead of
         # pushing the window off-screen.
-        self.setMaximumSize(self._max_popup_size())
+        self.setMaximumSize(max_size)
         self.adjustSize()
         self._center_on_active_screen()
         self.show()
@@ -167,16 +196,46 @@ class KheetSheetOverlay(QWidget):
             int(available.height() * MAX_SCREEN_FRACTION),
         )
 
+    def _pack_columns_into_rows(self, columns, available_width):
+        # Shelf-packs groups left-to-right, wrapping to a new row once the
+        # next one would exceed available_width - a dynamic count rather
+        # than a fixed one, so the popup only ever grows downward regardless
+        # of how many groups an app exposes or how wide any of them are.
+        row_layout = None
+        row_width = 0
+        for column in columns:
+            column_width = column.sizeHint().width()
+            if row_layout is None or row_width + GROUP_SPACING + column_width > available_width:
+                row_widget = QWidget()
+                row_layout = QHBoxLayout(row_widget)
+                row_layout.setContentsMargins(0, 0, 0, 0)
+                row_layout.setSpacing(GROUP_SPACING)
+                row_layout.addStretch()
+                self._rows_layout.addWidget(row_widget)
+                row_width = 0
+            # Inserted before the trailing stretch so columns stay packed to
+            # the left instead of spreading out across the row.
+            row_layout.insertWidget(row_layout.count() - 1, column, 0, Qt.AlignmentFlag.AlignTop)
+            row_width += column_width + (GROUP_SPACING if row_width else 0)
+
+    def _set_elided_text(self, label, text, max_width):
+        elided = label.fontMetrics().elidedText(text, Qt.TextElideMode.ElideRight, max_width)
+        label.setText(elided)
+        if elided != text:
+            label.setToolTip(text)
+
     def _build_column(self, group_name, items):
         column = QWidget()
+        column.setMaximumWidth(MAX_COLUMN_WIDTH)
         layout = QVBoxLayout(column)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
 
-        header = QLabel(group_name)
+        header = QLabel()
         header_font = QFont()
         header_font.setBold(True)
         header.setFont(header_font)
+        self._set_elided_text(header, group_name, MAX_COLUMN_WIDTH)
         layout.addWidget(header)
 
         for _, item_name, key_binding, accessible in items:
@@ -190,7 +249,18 @@ class KheetSheetOverlay(QWidget):
                 "background-color: rgba(255,255,255,30); border-radius: 4px;"
                 "padding: 1px 6px; font-family: monospace;"
             )
-            name_label = QLabel(item_name)
+            name_label = QLabel()
+            # Elided (not word-wrapped) so this label's width is a fixed,
+            # known quantity - a wrapped QLabel reports an elastic sizeHint
+            # that Qt happily shrinks well past what _pack_columns_into_rows
+            # measured, which is what let a row overflow its budget and
+            # squeeze itself into an unreadable sliver in testing.
+            name_max_width = (
+                MAX_COLUMN_WIDTH - row_layout.contentsMargins().left()
+                - row_layout.contentsMargins().right() - row_layout.spacing()
+                - key_label.sizeHint().width()
+            )
+            self._set_elided_text(name_label, item_name, name_max_width)
             row_layout.addWidget(key_label)
             row_layout.addWidget(name_label)
             row_layout.addStretch()
@@ -204,9 +274,9 @@ class KheetSheetOverlay(QWidget):
         invoke_shortcut(accessible)
         QTimer.singleShot(CLICK_FEEDBACK_MS, self.hide)
 
-    def _clear_grid(self):
-        while self._grid.count():
-            item = self._grid.takeAt(0)
+    def _clear_rows(self):
+        while self._rows_layout.count():
+            item = self._rows_layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
                 widget.deleteLater()
