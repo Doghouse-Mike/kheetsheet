@@ -97,27 +97,74 @@ modules:
         url: https://files.pythonhosted.org/packages/da/61/978c5fbca34f10a90df362502fbb5a005637909e7b5a0e9212349ea9d010/pygobject-3.56.3.tar.gz
         sha256: 12760e4a0e3d04b6eb95e06f7a27e362c826d567ea613373a92c003b6c70d2d6
 
-  - name: python3-pyqt6
+  - name: python3-pyqt6-sip
     buildsystem: simple
-    # Binary wheels - bundle their own private Qt6 rather than linking
-    # the runtime's. See open item above. PyQt6-sip is pinned to cp313
+    # PyQt6-sip is the runtime sip glue module (PyQt6.sip) - unrelated to
+    # dbus, no reason to build it from source. Pinned to cp313
     # specifically (not an abi3 wheel) to match the runtime's bundled
     # Python 3.13 exactly.
     build-commands:
       - pip3 install --prefix=${FLATPAK_DEST} --no-deps
           pyqt6_sip-13.11.1-cp313-cp313-manylinux1_x86_64.manylinux_2_5_x86_64.whl
-          pyqt6_qt6-6.11.1-py3-none-manylinux_2_34_x86_64.whl
-          pyqt6-6.11.0-cp310-abi3-manylinux_2_34_x86_64.whl
     sources:
       - type: file
         url: https://files.pythonhosted.org/packages/d4/e3/65b605759859d38231ce7544065d4c61f891eb7766c351318e2a0b08a473/pyqt6_sip-13.11.1-cp313-cp313-manylinux1_x86_64.manylinux_2_5_x86_64.whl
         sha256: a72f4ebdab16a8a484019ff593de90d8013d3286b678c6ba1c0bdb117f4fcb13
+
+  - name: python3-pyqt6
+    buildsystem: simple
+    build-options:
+      build-args:
+        - --share=network
+    # Built from source against org.kde.Sdk's own Qt6 (not PyPI's binary
+    # wheel, which bundles a private Qt6 AND lacks the dbus.mainloop.pyqt6
+    # extension entirely - see NOTES.md "Current blocker"). Turns out
+    # org.kde.Sdk carries dev headers for nearly all of Qt6's addon
+    # modules, not just qtbase, so this builds most of PyQt6 rather than
+    # just Core/Gui/Widgets/DBus - confirmed by an actual build, not
+    # assumed. --no-designer-plugin/--no-qml-plugin/--no-tools skip
+    # pieces that don't apply here (Qt Designer/qmlscene are GUI dev
+    # tools; pyuic6/pylupdate6 are UI-compiler CLI tools - nothing a
+    # headless daemon needs) and, as real bugs found by running this
+    # twice: both the designer plugin and the tool scripts try to
+    # install into paths under Qt's own prefix (/usr's plugin dir, then
+    # /usr/bin) rather than $FLATPAK_DEST, and /usr is the read-only
+    # org.kde.Sdk mount in the build sandbox.
+    # `sip` and `PyQt-builder` are BUILD-time tools (unrelated to the
+    # PyQt6-sip RUNTIME module above) - installed into a throwaway
+    # location so their console scripts land on PATH for this module's
+    # build only.
+    # --dbus points sip-build at dbus-python's header, which its own
+    # PyPI wheel installs to a non-standard path (not found by the
+    # default pkg-config search PyQt6's build does for libdbus itself).
+    build-commands:
+      - pip3 install --prefix=${FLATPAK_DEST}/pyqt6-build-tools sip-6.15.3.tar.gz pyqt_builder-1.19.1.tar.gz
+      - tar xzf pyqt6-6.11.0.tar.gz
+      - >-
+        cd pyqt6-6.11.0 &&
+        PATH=${FLATPAK_DEST}/pyqt6-build-tools/bin:$PATH
+        PYTHONPATH=${FLATPAK_DEST}/pyqt6-build-tools/lib/python3.13/site-packages
+        sip-build --confirm-license --verbose
+        --no-designer-plugin --no-qml-plugin --no-tools
+        --dbus=${FLATPAK_DEST}/include/python3.13/dbus-python/dbus-1.0
+        --target-dir=${FLATPAK_DEST}/lib/python3.13/site-packages
+      - cd pyqt6-6.11.0/build && make -j${FLATPAK_BUILDER_N_JOBS:-4}
+      - >-
+        cd pyqt6-6.11.0/build &&
+        PATH=${FLATPAK_DEST}/pyqt6-build-tools/bin:$PATH
+        PYTHONPATH=${FLATPAK_DEST}/pyqt6-build-tools/lib/python3.13/site-packages
+        make install
+      - rm -rf ${FLATPAK_DEST}/pyqt6-build-tools
+    sources:
       - type: file
-        url: https://files.pythonhosted.org/packages/e1/be/21d0df9bde717131f4245f8801676120d466afe198c4641c9e4982cf85fe/pyqt6_qt6-6.11.1-py3-none-manylinux_2_34_x86_64.whl
-        sha256: 254af349e0ef4b2fa581f86ee9d65eb797bb1d4f0c01ae5ceaa7b2446b458be9
+        url: https://files.pythonhosted.org/packages/02/b1/79bff1c49a9e19ffe0211cb8905cc514c3f6b8f3f7ae55a40403d346c076/sip-6.15.3.tar.gz
+        sha256: bb2516983f9f716d321e5157c00d0de0c12422eba73b8f43a44610a0f6622438
       - type: file
-        url: https://files.pythonhosted.org/packages/c3/a0/bd1399740dfa80c0a94d20b02d89962a31458233dcf70eaa09bfbccf3d0f/pyqt6-6.11.0-cp310-abi3-manylinux_2_34_x86_64.whl
-        sha256: 8555277989fa7d114cb3c3443fd261d566909f7268ceedd41d93a5f02d37ec05
+        url: https://files.pythonhosted.org/packages/61/f6/f3b504b4d55a7c4d3393cb90378501f1f5fc7f233bd85c0375674f84d2af/pyqt_builder-1.19.1.tar.gz
+        sha256: 6af6646ba29668751b039bfdced51642cb510e300796b58a4d68b7f956a024d8
+      - type: file
+        url: https://files.pythonhosted.org/packages/8b/47/b25c13eca5bebc6505394d0223e46d7ebf0c57dcac2ed908d7d19b18ab6b/pyqt6-6.11.0.tar.gz
+        sha256: 45dd60aa69976de1918b5ced6b4e7b6a25abd2a919ecef5fd5826ecc76718889
 
   - name: kheetsheet
     buildsystem: simple
