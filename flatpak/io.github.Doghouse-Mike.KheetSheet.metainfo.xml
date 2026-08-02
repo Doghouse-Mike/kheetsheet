@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.Doghouse-Mike.KheetSheet</id>
+  <name>KheetSheet</name>
+  <summary>Keyboard shortcut overlay for the app you're currently using</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>
+      KheetSheet shows a full-screen overlay of the active application's
+      keyboard shortcuts, read live from its menus via AT-SPI, whenever
+      you press a global shortcut.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.Doghouse-Mike.KheetSheet.desktop</launchable>
+  <url type="homepage">https://github.com/Doghouse-Mike/kheetsheet</url>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <!-- PLACEHOLDER - fill in once there's a tagged release. -->
+    <release version="0.1.0" date="2026-08-02" />
+  </releases>
+</component>

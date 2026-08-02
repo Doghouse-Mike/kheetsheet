@@ -1,0 +1,118 @@
+id: io.github.Doghouse-Mike.KheetSheet
+runtime: org.kde.Platform
+runtime-version: '6.11'
+sdk: org.kde.Sdk
+command: kheetsheet
+
+# --- DRAFT / UNTESTED --------------------------------------------------
+# Written from a bwrap+xdg-dbus-proxy spike, not yet run through
+# flatpak-builder (not installed on the machine this was drafted on).
+# Known open items before this can actually build, in rough order of
+# how likely they are to need iteration:
+#
+#   1. PyQt6 module below installs the PyPI binary wheel, which bundles
+#      its own private copy of Qt6 rather than linking the runtime's.
+#      That works but duplicates ~150-250MB already provided by
+#      org.kde.Platform, and Flathub reviewers usually push back on
+#      bundling a lib the runtime already ships. The alternative -
+#      building PyQt6 from source with sip-build against the runtime's
+#      Qt6 - avoids that but is a much heavier module (needs PyQt6-sip,
+#      the full qtbase/qtdeclarative dev headers, and license
+#      acknowledgement flags). Shipped the simple version first since
+#      the goal right now is "does this run at all."
+#   2. dbus-python and PyGObject both need to compile C extensions
+#      against glib/dbus/gobject-introspection dev headers. org.kde.Sdk
+#      *should* carry these (KDE Frameworks itself needs them), but
+#      that's inferred, not confirmed - the actual build will say for
+#      sure.
+#   3. Versions/hashes for the pip modules below are illustrative, not
+#      pinned - flatpak-pip-generator (a script from the flatpak-builder
+#      tools repo) is the normal way to generate a properly hashed
+#      pip module list and should replace this by-hand version.
+#   4. kpackagetool6 / kwriteconfig6 / qdbus ARE present in
+#      org.kde.Platform//6.11 (confirmed by inspecting the installed
+#      runtime's /bin directly) - so install.sh's KWin-script-install
+#      logic can run largely as-is inside the sandbox rather than
+#      being reimplemented. qdbus is named `qdbus`, not `qdbus6`/
+#      `qdbus-qt6` - the wrapper script below adjusts for that.
+#   5. No icon file exists in the repo yet - icon/desktop-file/appdata
+#      below are placeholders.
+# ------------------------------------------------------------------------
+
+finish-args:
+  # XWayland socket - the daemon hardcodes QT_QPA_PLATFORM=xcb (see
+  # kheetsheet-daemon.service) because it talks to /tmp/.X11-unix
+  # directly, not because it can't run under native Wayland.
+  - --socket=x11
+  - --socket=session-bus
+
+  # AT-SPI cross-app querying needs no explicit flag - Flatpak grants
+  # --a11y-bus by default for normal apps (only its --sandbox testing
+  # mode disables it). Confirmed empirically in the bwrap spike: a
+  # fully isolated sandbox could enumerate all running AT-SPI apps on
+  # the real desktop.
+  #
+  # KWin's D-Bus interface, on the other hand, IS restricted by
+  # default (ServiceUnknown until granted) - this is the one
+  # non-default permission a Flathub reviewer will ask about.
+  - --talk-name=org.kde.KWin
+
+  # For copying the KWin script into ~/.local/share/kwin/scripts. Scoped
+  # to that one subdirectory rather than all of xdg-data.
+  - --filesystem=xdg-data/kwin:create
+
+  # kglobalaccel shortcut (System Settings -> Shortcuts) calls
+  # `gdbus call --dest com.kheetsheet.Daemon ...` from the host, outside
+  # the sandbox, straight to the session bus - reaches the app as long
+  # as it owns that name, no extra finish-arg needed for that part.
+
+modules:
+  - name: python3-dbus-python
+    buildsystem: simple
+    build-commands:
+      - pip3 install --no-index --find-links="file://${PWD}" --prefix=${FLATPAK_DEST} dbus-python
+    sources:
+      - type: file
+        url: https://files.pythonhosted.org/packages/dbus-python/dbus-python-1.3.2.tar.gz
+        sha256: PLACEHOLDER_REPLACE_WITH_FLATPAK_PIP_GENERATOR_OUTPUT
+
+  - name: python3-pygobject
+    buildsystem: simple
+    build-commands:
+      - pip3 install --no-index --find-links="file://${PWD}" --prefix=${FLATPAK_DEST} pygobject
+    sources:
+      - type: file
+        url: https://files.pythonhosted.org/packages/pygobject/pygobject-3.50.0.tar.gz
+        sha256: PLACEHOLDER_REPLACE_WITH_FLATPAK_PIP_GENERATOR_OUTPUT
+
+  - name: python3-pyqt6
+    buildsystem: simple
+    # Binary wheel - bundles its own Qt6 rather than linking the
+    # runtime's. See open item #1 above.
+    build-commands:
+      - pip3 install --no-index --find-links="file://${PWD}" --prefix=${FLATPAK_DEST} PyQt6
+    sources:
+      - type: file
+        url: https://files.pythonhosted.org/packages/PyQt6/PyQt6-6.7.1-cp39-abi3-manylinux_2_28_x86_64.whl
+        sha256: PLACEHOLDER_REPLACE_WITH_FLATPAK_PIP_GENERATOR_OUTPUT
+
+  - name: kheetsheet
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 daemon/__main__.py /app/lib/kheetsheet/daemon/__main__.py
+      - install -Dm644 daemon/overlay.py /app/lib/kheetsheet/daemon/overlay.py
+      - install -Dm644 daemon/service.py /app/lib/kheetsheet/daemon/service.py
+      - install -Dm755 flatpak/kheetsheet-wrapper.sh /app/bin/kheetsheet
+      # kwin-script ships inside the app; the wrapper below installs it
+      # into the granted xdg-data/kwin path on first run.
+      - cp -r kwin-script /app/lib/kheetsheet/kwin-script
+      - install -Dm644 flatpak/io.github.Doghouse-Mike.KheetSheet.desktop \
+          /app/share/applications/io.github.Doghouse-Mike.KheetSheet.desktop
+      - install -Dm644 flatpak/io.github.Doghouse-Mike.KheetSheet.metainfo.xml \
+          /app/share/metainfo/io.github.Doghouse-Mike.KheetSheet.metainfo.xml
+      # PLACEHOLDER - no icon file exists in the repo yet.
+      - install -Dm644 flatpak/icon-placeholder.svg \
+          /app/share/icons/hicolor/scalable/apps/io.github.Doghouse-Mike.KheetSheet.svg
+    sources:
+      - type: dir
+        path: ..

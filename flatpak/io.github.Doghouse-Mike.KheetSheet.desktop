@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=KheetSheet
+Comment=Overlay showing the active app's keyboard shortcuts
+Exec=kheetsheet
+Icon=io.github.Doghouse-Mike.KheetSheet
+Categories=Utility;Accessibility;
+Terminal=false
