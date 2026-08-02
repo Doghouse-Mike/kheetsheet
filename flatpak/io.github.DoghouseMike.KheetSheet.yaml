@@ -247,7 +247,14 @@ modules:
       - install -Dm644 flatpak/icon-placeholder.svg \
           /app/share/icons/hicolor/scalable/apps/io.github.DoghouseMike.KheetSheet.svg
     sources:
-      - type: dir
-        path: ..
-        skip:
-          - .git
+      # type: git, not type: dir - --sandbox (Flathub's real build mode)
+      # forbids a dir source from traversing outside the manifest's own
+      # directory, confirmed by hitting that exact error with the
+      # previous `path: ..` source. A git source has no such
+      # restriction since it's a network fetch, not a local traversal.
+      # url is a local file:// path for now since nothing here has been
+      # pushed to origin/main yet - swap for the real
+      # https://github.com/Doghouse-Mike/kheetsheet.git URL once it has.
+      - type: git
+        url: file:///var/home/mike/kheetsheet
+        commit: 15b4b98e6070c468612609923230e72d3fa362d3
