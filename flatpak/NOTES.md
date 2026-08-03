@@ -131,17 +131,59 @@ KWin's own benefit if it ever restarts independently.
   because `org.kde.Sdk` has dev headers for most of them and
   PyQt-builder builds whatever it can find headers for. Not wrong, just
   bigger than strictly necessary.
-- The `type: git` source's `url` needs to become the real GitHub URL
-  once these `flatpak/` files (and the daemon fixes) are pushed to
-  `origin/main` - not done yet, this whole session's work is local
-  commits only.
 - The kwin-script filesystem grant, kwinrc filesystem grant, KWin D-Bus
   talk-name, and Background portal permission are what a Flathub
   reviewer will ask to be justified - all now demonstrably necessary
   (not just assumed necessary), which makes that conversation easier.
 
+## Two more real bugs found and fixed (2026-08-03)
+
+- **Stale commit pin.** The `kheetsheet` module's git source was still
+  pinned to `15b4b98`, from before the real icon was added - a build
+  against that commit checked out a tree missing
+  `io.github.DoghouseMike.KheetSheet.svg` entirely and failed on the
+  icon install step with `install: cannot stat ...`.
+- **Desktop/metainfo/icon silently never installed, in every prior
+  build.** The three `install -Dm644 ... \` build-commands used a YAML
+  multi-line plain scalar with a trailing shell-style `\` continuation.
+  YAML block-scalar folding already joins those lines with a single
+  space - it doesn't treat `\` as a continuation character at all, so
+  the shell actually received `... .desktop \ /app/share/...`. Bash's
+  `\ ` (backslash-space) escapes the space *into* the argument instead
+  of splitting on it, so the destination argument became
+  `" /app/share/applications/..."` - a relative path starting with a
+  literal space character, not an absolute `/app/...` path. Every build
+  to date silently created a bogus `" /app/share/..."` directory tree
+  instead of installing to the real app tree. No error was ever
+  surfaced - `install -D` happily creates whatever destination path
+  it's given. Confirmed directly by inspecting
+  `.flatpak-builder/build/kheetsheet-*/` and finding a literal
+  space-named directory containing `app/share/applications/...` etc.
+  Fixed by collapsing each command onto one line (no continuation
+  needed - YAML already folds the two source lines with a space).
+
+  Practical effect: the desktop entry, AppStream metainfo, and icon had
+  never actually worked in any Flatpak build of this app, despite the
+  earlier "real icon added" and "metainfo.xml validated" notes above -
+  those were true of the *source files*, not of what actually landed in
+  the built app. Verified the fix with a full rebuild: `appstreamcli
+  compose` now finds and composes the component (previously logged "No
+  appstream data" and silently skipped it), and the desktop file,
+  metainfo, and generated PNG icons (48/64/128px + @2x) all appear
+  under the installed app's `files/share/`.
+
+- **`url` swapped to the real GitHub URL.** Now
+  `https://github.com/Doghouse-Mike/kheetsheet.git`, still pinned to
+  `e0887868fbf033da1af579dc6384cd6cb83a2250` (the icon commit - the two
+  bug-fix commits above only touch the manifest file itself, which
+  `flatpak-builder` reads directly off disk, not through the git
+  source, so the pin didn't need to move again). Verified with a full
+  `--sandbox` build that actually clones over HTTPS from GitHub.
+
 ## Next concrete step
 
-Push to `origin/main`, then update the git source's `url` to the real
-GitHub URL and `commit` to whatever lands as the final pushed HEAD -
-the last step before an actual Flathub submission.
+Everything above is now pushed to `origin/main` and builds clean
+end-to-end (`--sandbox`, real GitHub source, desktop/icon/metainfo all
+landing correctly). Remaining before an actual Flathub submission:
+get the PyQt6 module's `--enable=` allowlist trimmed down (see "Still
+open" above, size-only, not a correctness blocker), then submit.

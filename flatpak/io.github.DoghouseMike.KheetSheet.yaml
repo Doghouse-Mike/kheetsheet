@@ -246,9 +246,6 @@ modules:
       # directory, confirmed by hitting that exact error with the
       # previous `path: ..` source. A git source has no such
       # restriction since it's a network fetch, not a local traversal.
-      # url is a local file:// path for now since nothing here has been
-      # pushed to origin/main yet - swap for the real
-      # https://github.com/Doghouse-Mike/kheetsheet.git URL once it has.
       - type: git
-        url: file:///var/home/mike/kheetsheet
+        url: https://github.com/Doghouse-Mike/kheetsheet.git
         commit: e0887868fbf033da1af579dc6384cd6cb83a2250
