@@ -1,4 +1,4 @@
-id: io.github.DoghouseMike.KheetSheet
+id: coffee._28mm.KheetSheet
 runtime: org.kde.Platform
 runtime-version: '6.11'
 sdk: org.kde.Sdk
@@ -29,10 +29,17 @@ cleanup:
 #   - PyQt6 builds most of Qt6's addon modules (org.kde.Sdk has dev
 #     headers for nearly all of them), more than KheetSheet actually
 #     uses - not wrong, just bigger than necessary.
-#   - The kheetsheet module's git source below still points at a local
-#     file:// URL pinned to a specific commit - needs to become the real
-#     https://github.com/Doghouse-Mike/kheetsheet.git URL, repinned to
-#     whatever commit ends up pushed, before actual Flathub submission.
+#
+# App ID is coffee._28mm.KheetSheet, not coffee._28mm.KheetSheet -
+# the GitHub username is Doghouse-Mike (with a hyphen), which Flatpak IDs
+# don't allow outside the last segment, so io.github.* verification (which
+# checks the ID against your GitHub username) can't work here. Rooted at
+# 28mm.coffee instead, a domain actually owned - reverse-DNS is
+# coffee.28mm, and per Flathub's own naming rules a component starting
+# with a digit gets an underscore prefix (their own example: 7-zip.org ->
+# org._7_zip), giving coffee._28mm. Verified via Flathub's website method
+# (a token file at https://28mm.coffee/.well-known/org.flathub.VerifiedApps.txt)
+# once the app is actually submitted and a token is issued.
 # -----------------------------------------------------------------------
 
 finish-args:
@@ -237,9 +244,9 @@ modules:
       # kwin-script ships inside the app; the wrapper below installs it
       # into the granted xdg-data/kwin path on first run.
       - cp -r kwin-script /app/lib/kheetsheet/kwin-script
-      - install -Dm644 flatpak/io.github.DoghouseMike.KheetSheet.desktop /app/share/applications/io.github.DoghouseMike.KheetSheet.desktop
-      - install -Dm644 flatpak/io.github.DoghouseMike.KheetSheet.metainfo.xml /app/share/metainfo/io.github.DoghouseMike.KheetSheet.metainfo.xml
-      - install -Dm644 flatpak/io.github.DoghouseMike.KheetSheet.svg /app/share/icons/hicolor/scalable/apps/io.github.DoghouseMike.KheetSheet.svg
+      - install -Dm644 flatpak/coffee._28mm.KheetSheet.desktop /app/share/applications/coffee._28mm.KheetSheet.desktop
+      - install -Dm644 flatpak/coffee._28mm.KheetSheet.metainfo.xml /app/share/metainfo/coffee._28mm.KheetSheet.metainfo.xml
+      - install -Dm644 flatpak/coffee._28mm.KheetSheet.svg /app/share/icons/hicolor/scalable/apps/coffee._28mm.KheetSheet.svg
     sources:
       # type: git, not type: dir - --sandbox (Flathub's real build mode)
       # forbids a dir source from traversing outside the manifest's own

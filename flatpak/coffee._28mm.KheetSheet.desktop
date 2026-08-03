@@ -3,6 +3,6 @@ Type=Application
 Name=KheetSheet
 Comment=Overlay showing the active app's keyboard shortcuts
 Exec=kheetsheet
-Icon=io.github.DoghouseMike.KheetSheet
+Icon=coffee._28mm.KheetSheet
 Categories=Utility;Accessibility;
 Terminal=false
