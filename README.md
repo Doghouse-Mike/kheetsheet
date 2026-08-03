@@ -21,6 +21,16 @@ I, the human writing *this*, barely touched the actual code, that's all Clanker.
 | --- | --- |
 | ![Overlay showing Dolphin's File and Edit shortcuts](screenshots/example-dolphin.png) | ![Overlay showing the honest "no shortcuts" message](screenshots/example-no-shortcuts.png) |
 
+## Demo
+
+Toggling the overlay live over Konsole, Dolphin, and Kate, real shortcuts pulled from each app's own AT-SPI tree:
+
+![KheetSheet overlay toggling over Konsole, Dolphin, and Kate](screenshots/kheetsheet-demo.gif)
+
+| Konsole | Dolphin | Kate |
+| --- | --- | --- |
+| ![Konsole shortcuts overlay](screenshots/demo-konsole.png) | ![Dolphin shortcuts overlay](screenshots/demo-dolphin.png) | ![Kate shortcuts overlay](screenshots/demo-kate.png) |
+
 ## Supported Systems
 
 Any(?) KDE Plasma 6 desktop. I've only tested Kubuntu and Bazzite, installation may differ slightly for not those.
