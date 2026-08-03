@@ -1,4 +1,3 @@
-
 # KheetSheet
 
 A KDE Plasma clone of the ([discontinued](https://www.mediaatelier.com/en/LandingCheatSheet/)) Mac app Cheatsheet.
@@ -31,16 +30,93 @@ Toggling the overlay live over Konsole, Dolphin, and Kate, real shortcuts pulled
 | --- | --- | --- |
 | ![Konsole shortcuts overlay](screenshots/demo-konsole.png) | ![Dolphin shortcuts overlay](screenshots/demo-dolphin.png) | ![Kate shortcuts overlay](screenshots/demo-kate.png) |
 
-## Supported Systems
+## Installing on Bazzite
 
-Any(?) KDE Plasma 6 desktop. I've only tested Kubuntu and Bazzite, installation may differ slightly for not those.
+Tested on a real Bazzite (Kinoite) machine (or two), Plasma 6 / Wayland.
 
-Distro-specific install steps:
+Bazzite is built on Fedora Atomic (rpm-ostree) — the base OS image is immutable, so `dnf install` doesn't work the way `apt install` does on Kubuntu/Debian. Persistent system packages have to be *layered* onto the image with `rpm-ostree install`, which requires a reboot to take effect. Fedora's package names also don't all match Debian/Ubuntu's — same underlying software, different names.
 
-- **Kubuntu / Debian / Ubuntu-based** — this page, you're here.
-- **Bazzite / Fedora Atomic** — see [BAZZITE-README.md](BAZZITE-README.md). (*slightly* different steps)
+Everything else about KheetSheet (the daemon, the KWin script, `install.sh`, the manual shortcut-binding step) is standard KDE Plasma fare and doesn't need to change for Bazzite.
 
-## Install (Kubuntu/Debian/Ubuntu-based Plasma 6)
+### 1. Install Dependencies
+
+```
+rpm-ostree install python3-pyqt6 python3-dbus python3-gobject \
+    at-spi2-core kf6-kpackage kf6-kconfig qt6-qttools
+```
+
+Then reboot for the layered packages to take effect:
+
+```
+systemctl reboot
+```
+
+(Or just press the button)
+
+If your image already has some of these layered (check with `rpm-ostree status`) or ships them as part of the base Plasma spin, this step may be a partial or full no-op — `install.sh` (next step) tells you exactly what's still missing, so it's safe to just try running it first and only reach for `rpm-ostree install` if it reports a gap.
+
+#### Package Name Notes:
+
+- `python3-pyqt6`, `python3-dbus` match Debian's naming.
+- `python3-gobject` Fedora's name for what Debian calls `python3-gi`.
+- `at-spi2-core` provides the AT-SPI GObject-introspection typelib that Debian ships separately as `gir1.2-atspi-2.0`.
+- `kf6-kpackage`, `kf6-kconfig` provide `kpackagetool6` and
+  `kwriteconfig6`/`kreadconfig6`. On most Plasma spins these are already part of the base image.
+- `qt6-qttools` provides the Qt6 D-Bus CLI tool, but as **`qdbus-qt6`**, not
+  `qdbus6` (Debian's binary name for the same tool). `install.sh` checks for either name automatically, so this naming difference doesn't require any action.
+- **`python3-dbus.mainloop.pyqt6`** — no separate Fedora package, the module it provides (`dbus.mainloop.pyqt6`, imported by `daemon/__main__.py`) came through as part of `python3-pyqt6` in testing. If `install.sh` still reports this one missing after installing the above, that means your image needs it from `pip` instead.
+
+### 2. Run the Installer
+
+Nothing distro-specific in the script itself:
+
+```
+./install.sh
+```
+
+If it reports a missing dependency, that means the guess above was wrong. Find the real package with:
+
+```
+dnf provides '*/<missing-binary-or-file>'
+```
+
+e.g. `dnf provides '*/kwriteconfig6'` to find whatever package actually ships that binary on Bazzite, then `rpm-ostree install` it and reboot again.
+
+### 3. Bind the Global Shortcut
+
+Identical manual step to the Kubuntu install, this step is done through the GUI:
+
+1. Open **System Settings → Shortcuts**.
+2. Click **"Add New"** (top right) → **"Command or Script"**.
+3. I'd suggest naming it "KheetSheet" and set the command to:
+
+   ```
+   gdbus call --session --dest com.kheetsheet.Daemon --object-path /KheetSheet --method com.kheetsheet.Daemon.Toggle
+   ```
+
+4. Set your preferred trigger key
+5. Click **Apply**.
+
+> Double-check the key that actually lands in the trigger field before saving, it can end up different from what you pressed if the recording widget catches extra held modifiers or has a moment. I use `META+/`
+
+### 4. Try it
+
+Press your bound shortcut over a running Qt/KDE app.
+
+### Confirmed Working on Bazzite
+
+- **AT-SPI extraction** — walking a running app's accessible tree and pulling real shortcuts (group, name, keybinding) works exactly as on Kubuntu.
+- **`QT_QPA_PLATFORM=xcb` requirement** — the overlay renders correctly as an XWayland client over the Wayland session; no extra setup needed for XWayland itself.
+- **D-Bus / systemd wiring** — the daemon registers `com.kheetsheet.Daemon`, enables `org.a11y.Status.IsEnabled` itself, and the KWin script loads and reports active-window changes, all via the same systemd user service setup as Kubuntu.
+- **Flatpak apps** (common on Bazzite, which leans heavily on Flatpak for browsers and other user apps) — confirmed working end-to-end against Firefox and Vivaldi (both Flatpak). See Known Limitations below for how Flatpak pid-matching works.
+
+SELinux (enabled by default on Fedora/Bazzite, vs. AppArmor on Kubuntu) hasn't caused any issues against this daemon's AT-SPI queries.
+
+## Updating on Bazzite
+
+Same process as Kubuntu — see below. Nothing Bazzite-specific about it; `install.sh` handles re-checking dependencies, reinstalling, and restarting the daemon regardless of distro.
+
+## Installing on Kubuntu/Debian/Ubuntu-based Plasma 6
 
 ### 1. Install Dependencies
 
@@ -116,7 +192,7 @@ KheetSheet makes no network calls of any kind, and doesn't write logs, files, or
 - Only apps that expose their menu via AT-SPI will show anything. Traditional Qt/KDE apps (Dolphin, Kate, Konsole, ...) generally work well. Many GTK4 apps (header-bar-only, no traditional menu bar) and Electron apps expose little or nothing. The overlay will say so rather than try to guess.
 - Flatpak apps are matched by pid first, falling back to matching the AT-SPI app's name against the window's `resourceClass` — needed because every Flatpak app's D-Bus traffic goes through a per-instance `xdg-dbus-proxy`, so AT-SPI sees the proxy's pid for a window rather than the real app's.
 - This recovers real shortcut data for Flatpak apps that expose a normal menu, but some (like Firefox) *only* populate a given submenu's accessible items after it's been opened once in the running session. They'll show as empty until you've clicked into each menu manually. Like an animal.
-- Verified on Kubuntu/Plasma 6.6/Wayland and on Bazzite (Fedora Atomic) see [BAZZITE-README.md](BAZZITE-README.md) for the Fedora-specific notes.
+- Verified on Kubuntu/Plasma 6.6/Wayland and on Bazzite (Fedora Atomic) — see Installing on Bazzite above for Fedora-specific notes.
 
 ## Unknown Limitations
 
