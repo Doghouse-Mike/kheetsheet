@@ -237,12 +237,9 @@ modules:
       # kwin-script ships inside the app; the wrapper below installs it
       # into the granted xdg-data/kwin path on first run.
       - cp -r kwin-script /app/lib/kheetsheet/kwin-script
-      - install -Dm644 flatpak/io.github.DoghouseMike.KheetSheet.desktop \
-          /app/share/applications/io.github.DoghouseMike.KheetSheet.desktop
-      - install -Dm644 flatpak/io.github.DoghouseMike.KheetSheet.metainfo.xml \
-          /app/share/metainfo/io.github.DoghouseMike.KheetSheet.metainfo.xml
-      - install -Dm644 flatpak/io.github.DoghouseMike.KheetSheet.svg \
-          /app/share/icons/hicolor/scalable/apps/io.github.DoghouseMike.KheetSheet.svg
+      - install -Dm644 flatpak/io.github.DoghouseMike.KheetSheet.desktop /app/share/applications/io.github.DoghouseMike.KheetSheet.desktop
+      - install -Dm644 flatpak/io.github.DoghouseMike.KheetSheet.metainfo.xml /app/share/metainfo/io.github.DoghouseMike.KheetSheet.metainfo.xml
+      - install -Dm644 flatpak/io.github.DoghouseMike.KheetSheet.svg /app/share/icons/hicolor/scalable/apps/io.github.DoghouseMike.KheetSheet.svg
     sources:
       # type: git, not type: dir - --sandbox (Flathub's real build mode)
       # forbids a dir source from traversing outside the manifest's own
@@ -254,4 +251,4 @@ modules:
       # https://github.com/Doghouse-Mike/kheetsheet.git URL once it has.
       - type: git
         url: file:///var/home/mike/kheetsheet
-        commit: 15b4b98e6070c468612609923230e72d3fa362d3
+        commit: e0887868fbf033da1af579dc6384cd6cb83a2250
