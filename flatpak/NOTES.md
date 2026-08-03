@@ -115,10 +115,17 @@ KWin's own benefit if it ever restarts independently.
   Flathub's own CI generates at the repo level, not something an
   individual app build needs to embed itself.
 
+## Also resolved
+
+- **Real icon added.** `io.github.DoghouseMike.KheetSheet.svg` (a
+  monogram merging the K and the ⌘-style shortcut glyph) replaces
+  `icon-placeholder.svg`, installed to the same
+  `hicolor/scalable/apps/` path. Rendered clean with ImageMagick
+  (`convert -background none ... -resize 256x256`) as a sanity check -
+  no XML/rendering errors.
+
 ## Still open
 
-- No icon file yet - `icon-placeholder.svg` is a stand-in. This is the
-  one remaining thing before this could realistically go to Flathub.
 - PyQt6 built from source pulls in a lot of Qt6 addon modules
   (QtMultimedia, QtBluetooth, QtNfc, etc.) that KheetSheet doesn't use,
   because `org.kde.Sdk` has dev headers for most of them and
@@ -135,6 +142,6 @@ KWin's own benefit if it ever restarts independently.
 
 ## Next concrete step
 
-Supply a real icon, then push to `origin/main` and update the git
-source's `url` to the real GitHub URL as the last step before an actual
-Flathub submission.
+Push to `origin/main`, then update the git source's `url` to the real
+GitHub URL and `commit` to whatever lands as the final pushed HEAD -
+the last step before an actual Flathub submission.

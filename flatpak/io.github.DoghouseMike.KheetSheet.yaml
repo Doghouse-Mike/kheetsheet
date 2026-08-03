@@ -29,12 +29,10 @@ cleanup:
 #   - PyQt6 builds most of Qt6's addon modules (org.kde.Sdk has dev
 #     headers for nearly all of them), more than KheetSheet actually
 #     uses - not wrong, just bigger than necessary.
-#   - No icon file exists in the repo yet - icon/desktop-file/appdata
-#     below are placeholders.
-#   - The kheetsheet app module's source is still `type: dir, path: ..`,
-#     which only works for local builds run without --sandbox. Needs to
-#     become a `type: git` source before this could pass Flathub's real
-#     (always-sandboxed) build pipeline.
+#   - The kheetsheet module's git source below still points at a local
+#     file:// URL pinned to a specific commit - needs to become the real
+#     https://github.com/Doghouse-Mike/kheetsheet.git URL, repinned to
+#     whatever commit ends up pushed, before actual Flathub submission.
 # -----------------------------------------------------------------------
 
 finish-args:
@@ -243,8 +241,7 @@ modules:
           /app/share/applications/io.github.DoghouseMike.KheetSheet.desktop
       - install -Dm644 flatpak/io.github.DoghouseMike.KheetSheet.metainfo.xml \
           /app/share/metainfo/io.github.DoghouseMike.KheetSheet.metainfo.xml
-      # PLACEHOLDER - no icon file exists in the repo yet.
-      - install -Dm644 flatpak/icon-placeholder.svg \
+      - install -Dm644 flatpak/io.github.DoghouseMike.KheetSheet.svg \
           /app/share/icons/hicolor/scalable/apps/io.github.DoghouseMike.KheetSheet.svg
     sources:
       # type: git, not type: dir - --sandbox (Flathub's real build mode)
