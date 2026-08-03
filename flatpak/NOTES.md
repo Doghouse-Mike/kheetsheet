@@ -180,10 +180,66 @@ KWin's own benefit if it ever restarts independently.
   source, so the pin didn't need to move again). Verified with a full
   `--sandbox` build that actually clones over HTTPS from GitHub.
 
+## App ID rename, metainfo screenshots, and a real tagged release (2026-08-03)
+
+Three more Flathub-readiness gaps closed, everything below is pushed to
+`origin/main` and verified with a full `--sandbox` build against the
+real GitHub source:
+
+- **App ID renamed to `coffee._28mm.KheetSheet`.**
+  `io.github.DoghouseMike.KheetSheet` relied on `io.github`'s ownership
+  verification, which checks the ID's last-but-one segment against the
+  GitHub username - but the real username is `Doghouse-Mike` (with a
+  hyphen), which Flatpak IDs don't allow outside the last segment, so
+  that verification path can never succeed as-is. Rooted the ID at
+  `28mm.coffee` instead, a domain actually owned. Flathub's own naming
+  rules (their own example: `7-zip.org` -> `org._7_zip`) prefix a
+  component starting with a digit with an underscore, so the reverse-DNS
+  `coffee.28mm` becomes `coffee._28mm`. To be verified later via
+  Flathub's website method (a token file at
+  `https://28mm.coffee/.well-known/org.flathub.VerifiedApps.txt`) once
+  the app is actually submitted and a token is issued - that step can't
+  happen before submission.
+
+  Renamed the manifest, desktop file, metainfo, and icon accordingly
+  (all four files renamed, not just their `id:`/`<id>` fields), and
+  updated the AppStream `<developer id>` to match. Verified with a full
+  rebuild + local install + confirmed the daemon still loads its KWin
+  script correctly under the new ID.
+
+  Hit two unrelated environment issues while re-verifying this (not
+  manifest bugs): PyQt6 has to rebuild fully from source whenever the
+  manifest's own filename changes (it's part of the module cache key),
+  which takes over 30 minutes - don't `--force-clean` away a build
+  that's mid-way through it, and give it a long enough timeout to
+  actually finish. Separately, `rofiles-fuse` started intermittently
+  failing with `Permission denied` on its own mountpoint partway through
+  a run (looked like a race with a systemd-managed transient automount
+  unit reusing the same path) - `--disable-rofiles-fuse` sidesteps it
+  by falling back to plain copying instead of FUSE, no functional
+  downside for this build.
+
+- **Added `<screenshots>` to the metainfo.** There were none before -
+  Flathub's store listing reads screenshots from the metainfo itself,
+  separate from the README's images. Added the three per-app stills
+  (Konsole/Dolphin/Kate), pointed at stable `raw.githubusercontent.com`
+  URLs pinned to the `v0.1.0` tag (below) rather than `main`, so they
+  can't silently change or disappear later.
+
+- **Cut a real tagged release, `v0.1.0`.** The `<release>` entry was a
+  literal `PLACEHOLDER` comment before, with no matching git tag at all
+  (`git tag -l` was empty). Tagged and pushed `v0.1.0` at the tip of
+  `main` (the app-ID rename + GitHub-source-URL commits), updated the
+  metainfo `<release>` to match, and confirmed via the GitHub API that
+  the tag's tree actually contains the screenshot files referenced
+  above (the `raw.githubusercontent.com` URLs may take a few minutes to
+  reflect a brand-new tag even after the API confirms it - a CDN
+  propagation delay, not a real problem).
+
 ## Next concrete step
 
-Everything above is now pushed to `origin/main` and builds clean
-end-to-end (`--sandbox`, real GitHub source, desktop/icon/metainfo all
-landing correctly). Remaining before an actual Flathub submission:
-get the PyQt6 module's `--enable=` allowlist trimmed down (see "Still
-open" above, size-only, not a correctness blocker), then submit.
+Submission itself (forking `flathub/flathub`, requesting the app ID,
+and the website ownership-verification step that depends on it) is the
+one remaining piece, and has to be done by hand - not something to
+script. Optional, size-only cleanup that isn't a blocker: trim the
+PyQt6 module's `--enable=` allowlist (see "Still open" above).
