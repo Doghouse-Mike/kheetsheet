@@ -33,6 +33,16 @@
   </screenshots>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="0.1.1" date="2026-08-04">
+      <description>
+        <p>
+          Replaced the blanket session-bus socket permission with named
+          D-Bus grants (own-name for the daemon's own service, talk-name
+          for KWin only) — no functional change, smaller sandbox
+          footprint.
+        </p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-08-03" />
   </releases>
 </component>

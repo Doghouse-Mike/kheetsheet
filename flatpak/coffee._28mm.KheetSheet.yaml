@@ -47,7 +47,6 @@ finish-args:
   # kheetsheet-daemon.service) because it talks to /tmp/.X11-unix
   # directly, not because it can't run under native Wayland.
   - --socket=x11
-  - --socket=session-bus
 
   # AT-SPI cross-app querying needs no explicit flag - Flatpak grants
   # --a11y-bus by default for normal apps (only its --sandbox testing
@@ -58,6 +57,17 @@ finish-args:
   # KWin's D-Bus interface, on the other hand, IS restricted by
   # default (ServiceUnknown until granted) - this is the one
   # non-default permission a Flathub reviewer will ask about.
+  #
+  # Named D-Bus grants instead of a blanket --socket=session-bus: the
+  # daemon only ever registers its own name and talks to org.kde.KWin
+  # (confirmed by grepping daemon/*.py for every get_object/BusName
+  # call - AT-SPI's org.a11y.Bus is covered by the default a11y-bus
+  # grant above, nothing else is called). --socket=session-bus also let
+  # Qt/KDE Frameworks reach org.kde.KGlobalSettings, org.kde.kconfig.notify,
+  # and com.canonical.AppMenu.Registrar automatically (theme-reload and
+  # global-menu integration) - KheetSheet doesn't use either, and losing
+  # them is a silent no-op, not a functional regression.
+  - --own-name=com.kheetsheet.Daemon
   - --talk-name=org.kde.KWin
 
   # For copying the KWin script into ~/.local/share/kwin/scripts. Scoped
