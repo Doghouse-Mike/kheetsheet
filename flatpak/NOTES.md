@@ -57,9 +57,6 @@ Also simplified while investigating: the wrapper no longer calls `loadScript`/`s
   validity - it's about a composed AppStream catalog cache that
   Flathub's own CI generates at the repo level, not something an
   individual app build needs to embed itself.
-
-## Also Resolved
-
 - **Real icon added.** `io.github.DoghouseMike.KheetSheet.svg` (a
   monogram merging the K and the ⌘-style shortcut glyph) replaces
   `icon-placeholder.svg`, installed to the same
