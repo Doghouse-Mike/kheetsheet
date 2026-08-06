@@ -39,7 +39,6 @@ Toggling the overlay live over Konsole, Dolphin, and Kate, real shortcuts pulled
   2. Doubleclick the downloaded file
   3. ???
   4. Profit
-$1
 
 ## Legacy Installation
 
