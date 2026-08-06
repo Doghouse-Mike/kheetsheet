@@ -1,14 +1,17 @@
+
 # KheetSheet
 
 A KDE Plasma clone of the ([discontinued](https://www.mediaatelier.com/en/LandingCheatSheet/)) Mac app Cheatsheet.
 
+![](https://raw.githubusercontent.com/Doghouse-Mike/quartzpics/main/assets/20260806T224556944Z.png)
+
 The idea is that you press a hotkey, and see the focused app's keyboard shortcuts in an overlay, grouped by menu. Shortcut data comes entirely from AT-SPI (the accessibility tree) which has some limitations. If an app *doesn't* expose its menu via AT-SPI (many GTK4/Electron apps), you'll get a simple "no shortcuts found". I've not been able to find a workaround that wasn't super creepy or likely to serve stale data. Or both. Yet?
 
-> I have an idea for Obsidian, but it'd mean accessing the vault to read custom & plugin keybinds and might not get anywhere.
+> I have an idea for Obsidian, but it'd mean accessing the vault to read custom & plugin keybinds and might not get anywhere. Stay tuned?
 
 Many GTK4 apps *do* institute their own version though, `CTRL+?` (Or `CTRL+SHIFT+/`) will bring up *their* native overlay.
 
-A bit more on reasoning/thoughts without clogging this up any more than it already is can be found [here](https://28mm.coffee/kheetsheet)
+More on reasoning/thoughts without clogging this up any more than it already is live [here](https://28mm.coffee/kheetsheet)
 
 ## AI Disclosure
 
@@ -30,13 +33,17 @@ Toggling the overlay live over Konsole, Dolphin, and Kate, real shortcuts pulled
 | --- | --- | --- |
 | ![Konsole shortcuts overlay](screenshots/demo-konsole.png) | ![Dolphin shortcuts overlay](screenshots/demo-dolphin.png) | ![Kate shortcuts overlay](screenshots/demo-kate.png) |
 
-## Installing on Bazzite
+## Installation
 
-Tested on a real Bazzite (Kinoite) machine (or two), Plasma 6 / Wayland.
+  1. Grab the Flatpak from [Releases](https://github.com/Doghouse-Mike/kheetsheet/releases)
+  2. Doubleclick the downloaded file
+  3. ???
+  4. Profit
+$1
 
-Bazzite is built on Fedora Atomic (rpm-ostree) — the base OS image is immutable, so `dnf install` doesn't work the way `apt install` does on Kubuntu/Debian. Persistent system packages have to be *layered* onto the image with `rpm-ostree install`, which requires a reboot to take effect. Fedora's package names also don't all match Debian/Ubuntu's — same underlying software, different names.
+## Legacy Installation
 
-Everything else about KheetSheet (the daemon, the KWin script, `install.sh`, the manual shortcut-binding step) is standard KDE Plasma fare and doesn't need to change for Bazzite.
+> This entire section can probably be ignored, there's a Flatpak *right there* ->
 
 ### 1. Install Dependencies
 
