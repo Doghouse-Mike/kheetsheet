@@ -11,7 +11,7 @@ The idea is that you press a hotkey, and see the focused app's keyboard shortcut
 
 Many GTK4 apps *do* institute their own version though, `CTRL+?` (Or `CTRL+SHIFT+/`) will bring up *their* native overlay.
 
-More on reasoning/thoughts without clogging this up any more than it already is live [here](https://28mm.coffee/kheetsheet)
+More on reasoning/thoughts without clogging this up any more than it already is live [here](https://28mm.coffee/the-reasoning-behind-kheetsheet)
 
 ## AI Disclosure
 
