@@ -265,4 +265,5 @@ modules:
       # restriction since it's a network fetch, not a local traversal.
       - type: git
         url: https://github.com/Doghouse-Mike/kheetsheet.git
-        commit: 255d553e5ed2d4688a876e8cf03fb4b494c21e64
+        commit: 7689beccfd62ffb1a1ac08768691b79a1788d308
+
