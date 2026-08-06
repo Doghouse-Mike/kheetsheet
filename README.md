@@ -37,8 +37,11 @@ Toggling the overlay live over Konsole, Dolphin, and Kate, real shortcuts pulled
 
   1. Grab the Flatpak from [Releases](https://github.com/Doghouse-Mike/kheetsheet/releases)
   2. Doubleclick the downloaded file
-  3. ???
-  4. Profit
+  3. Open System Settings → Shortcuts → Add New → Command or Script, name it "KheetSheet", and set the command to:
+     `gdbus call --session --dest com.kheetsheet.Daemon --object-path /KheetSheet --method com.kheetsheet.Daemon.Toggle`
+     and set your preferred trigger key (I use `CTRL+/`, you do you though)
+  4. ???
+  5. Profit
 
 ## Legacy Installation
 
