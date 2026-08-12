@@ -33,6 +33,15 @@
   </screenshots>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="0.1.2" date="2026-08-12">
+      <description>
+        <p>
+          Added localisation support — KheetSheet's own UI text now
+          follows the user's language settings, rather than always
+          showing in English.
+        </p>
+      </description>
+    </release>
     <release version="0.1.1" date="2026-08-04">
       <description>
         <p>
