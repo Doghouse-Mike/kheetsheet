@@ -5,6 +5,7 @@ import dbus.service
 from dbus.mainloop.pyqt6 import DBusQtMainLoop
 from PyQt6.QtWidgets import QApplication
 
+from i18n import _
 from overlay import KheetSheetOverlay
 from service import (
     ensure_accessibility_enabled,
@@ -35,7 +36,7 @@ class KheetSheetService(dbus.service.Object):
             self._overlay.hide()
             return
         if self._active_pid is None:
-            self._overlay.show_shortcuts("No active window known", [])
+            self._overlay.show_shortcuts(_("No active window known"), [])
             return
         app_name, shortcuts = shortcuts_for_pid(self._active_pid, self._active_app_id)
         self._overlay.show_shortcuts(app_name or self._active_app_id, shortcuts)

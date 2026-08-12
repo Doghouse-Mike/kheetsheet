@@ -1,0 +1,14 @@
+# Breton translation of KheetSheet.
+msgid ""
+msgstr ""
+"Project-Id-Version: KheetSheet\n"
+"Language: br\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Unknown application"
+msgstr "Arload dianav"
+
+msgid "No AT-SPI-exposed shortcuts found for this application.\nGTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+msgstr "N'eus bet kavet berradennoù diskouezet gant AT-SPI ebet evit an arload-mañ.\nArload GTK? Klaskit Ctrl+? — kalz anezho a stag o prenestr berradennoù dezhañ."

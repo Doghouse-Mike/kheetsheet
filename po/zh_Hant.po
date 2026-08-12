@@ -1,0 +1,14 @@
+# Chinese translation of KheetSheet.
+msgid ""
+msgstr ""
+"Project-Id-Version: KheetSheet\n"
+"Language: zh_Hant\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Unknown application"
+msgstr "未知應用程式"
+
+msgid "No AT-SPI-exposed shortcuts found for this application.\nGTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+msgstr "找不到此應用程式透過 AT-SPI 公開的快捷鍵。\nGTK 應用程式嗎?試試 Ctrl+? — 許多程式會將自己的快捷鍵視窗綁定到此鍵。"

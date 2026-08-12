@@ -1,0 +1,14 @@
+# Japanese translation of KheetSheet.
+msgid ""
+msgstr ""
+"Project-Id-Version: KheetSheet\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Unknown application"
+msgstr "不明なアプリケーション"
+
+msgid "No AT-SPI-exposed shortcuts found for this application.\nGTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+msgstr "このアプリケーションには AT-SPI で公開されているショートカットが見つかりませんでした。\nGTK アプリですか? Ctrl+? を試してください — 多くのアプリが独自のショートカットウィンドウをこれに割り当てています。"

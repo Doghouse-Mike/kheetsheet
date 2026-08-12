@@ -1,0 +1,14 @@
+# Romanian translation of KheetSheet.
+msgid ""
+msgstr ""
+"Project-Id-Version: KheetSheet\n"
+"Language: ro\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Unknown application"
+msgstr "Aplicație necunoscută"
+
+msgid "No AT-SPI-exposed shortcuts found for this application.\nGTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+msgstr "Nu s-au găsit comenzi rapide expuse prin AT-SPI pentru această aplicație.\nAplicație GTK? Încercați Ctrl+? — multe își leagă propria fereastră de comenzi rapide de aceasta."

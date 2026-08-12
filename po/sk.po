@@ -1,0 +1,14 @@
+# Slovak translation of KheetSheet.
+msgid ""
+msgstr ""
+"Project-Id-Version: KheetSheet\n"
+"Language: sk\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Unknown application"
+msgstr "Neznáma aplikácia"
+
+msgid "No AT-SPI-exposed shortcuts found for this application.\nGTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+msgstr "Pre túto aplikáciu sa nenašli žiadne skratky sprístupnené cez AT-SPI.\nAplikácia GTK? Skúste Ctrl+? — mnohé z nich naň viažu vlastné okno skratiek."

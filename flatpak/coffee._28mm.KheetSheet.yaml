@@ -250,10 +250,16 @@ modules:
       - install -Dm755 daemon/__main__.py /app/lib/kheetsheet/daemon/__main__.py
       - install -Dm644 daemon/overlay.py /app/lib/kheetsheet/daemon/overlay.py
       - install -Dm644 daemon/service.py /app/lib/kheetsheet/daemon/service.py
+      - install -Dm644 daemon/i18n.py /app/lib/kheetsheet/daemon/i18n.py
       - install -Dm755 flatpak/kheetsheet-wrapper.sh /app/bin/kheetsheet
       # kwin-script ships inside the app; the wrapper below installs it
       # into the granted xdg-data/kwin path on first run.
       - cp -r kwin-script /app/lib/kheetsheet/kwin-script
+      # Pre-compiled .mo files, committed alongside their po/ sources -
+      # same reasoning as kwin-script above, it's just static data, no
+      # compile step needed in the sandbox. i18n.py resolves this as a
+      # sibling of daemon/, which is true here too (/app/lib/kheetsheet).
+      - cp -r locale /app/lib/kheetsheet/locale
       - install -Dm644 flatpak/coffee._28mm.KheetSheet.desktop /app/share/applications/coffee._28mm.KheetSheet.desktop
       - install -Dm644 flatpak/coffee._28mm.KheetSheet.metainfo.xml /app/share/metainfo/coffee._28mm.KheetSheet.metainfo.xml
       - install -Dm644 flatpak/coffee._28mm.KheetSheet.svg /app/share/icons/hicolor/scalable/apps/coffee._28mm.KheetSheet.svg
@@ -265,5 +271,5 @@ modules:
       # restriction since it's a network fetch, not a local traversal.
       - type: git
         url: https://github.com/Doghouse-Mike/kheetsheet.git
-        commit: 7689beccfd62ffb1a1ac08768691b79a1788d308
+        commit: 9ce65f63b54fb3b5f689ad2700e661070194f5f5
 

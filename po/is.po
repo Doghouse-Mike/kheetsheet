@@ -1,0 +1,14 @@
+# Icelandic translation of KheetSheet.
+msgid ""
+msgstr ""
+"Project-Id-Version: KheetSheet\n"
+"Language: is\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Unknown application"
+msgstr "Óþekkt forrit"
+
+msgid "No AT-SPI-exposed shortcuts found for this application.\nGTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+msgstr "Engir flýtilyklar sem AT-SPI birtir fundust fyrir þetta forrit.\nGTK-forrit? Prófaðu Ctrl+? — mörg þeirra tengja sinn eigin flýtilyklaglugga við það."

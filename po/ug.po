@@ -1,0 +1,14 @@
+# Uyghur translation of KheetSheet.
+msgid ""
+msgstr ""
+"Project-Id-Version: KheetSheet\n"
+"Language: ug\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Unknown application"
+msgstr "نامەلۇم پروگرامما"
+
+msgid "No AT-SPI-exposed shortcuts found for this application.\nGTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+msgstr "بۇ پروگرامما ئۈچۈن AT-SPI ئارقىلىق ئاشكارىلانغان تېزلەتمە تېپىلمىدى.\nGTK پروگراممىسىمۇ؟ Ctrl+? نى سىناڭ — نۇرغۇنلىرى ئۆزىنىڭ تېزلەتمە كۆزنىكىنى بۇنىڭغا باغلايدۇ."

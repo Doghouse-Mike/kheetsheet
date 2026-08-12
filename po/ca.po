@@ -1,0 +1,14 @@
+# Catalan translation of KheetSheet.
+msgid ""
+msgstr ""
+"Project-Id-Version: KheetSheet\n"
+"Language: ca\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Unknown application"
+msgstr "Aplicació desconeguda"
+
+msgid "No AT-SPI-exposed shortcuts found for this application.\nGTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+msgstr "No s'han trobat dreceres exposades per AT-SPI per a aquesta aplicació.\nAplicació GTK? Prova Ctrl+? — moltes vinculen la seva pròpia finestra de dreceres a això."

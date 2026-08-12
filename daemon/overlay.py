@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
     QFrame,
 )
 
+from i18n import _
 from service import invoke_shortcut
 
 # How long the pressed/highlighted state stays visible before the overlay
@@ -131,7 +132,7 @@ class KheetSheetOverlay(QWidget):
         self._layout.addWidget(self._scroll)
 
     def show_shortcuts(self, app_name, shortcuts):
-        self._title.setText(app_name or "Unknown application")
+        self._title.setText(app_name or _("Unknown application"))
 
         # QScrollArea (in setWidgetResizable(False) mode) silently freezes
         # _grid_holder's effective size after the first show_shortcuts() call
@@ -150,8 +151,10 @@ class KheetSheetOverlay(QWidget):
 
         if not shortcuts:
             empty = QLabel(
-                "No AT-SPI-exposed shortcuts found for this application.\n"
-                "GTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+                _(
+                    "No AT-SPI-exposed shortcuts found for this application.\n"
+                    "GTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+                )
             )
             empty.setWordWrap(True)
             self._rows_layout.addWidget(empty)

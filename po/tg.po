@@ -1,0 +1,14 @@
+# Tajik translation of KheetSheet.
+msgid ""
+msgstr ""
+"Project-Id-Version: KheetSheet\n"
+"Language: tg\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Unknown application"
+msgstr "Барномаи номаълум"
+
+msgid "No AT-SPI-exposed shortcuts found for this application.\nGTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+msgstr "Барои ин барнома тавассути AT-SPI ошкоршуда миёнбурҳо ёфт нашуданд.\nБарномаи GTK аст? Ctrl+? -ро санҷед — бисёриҳо равзанаи миёнбурҳои худро ба он мепайванданд."

@@ -1,0 +1,14 @@
+# Bengali translation of KheetSheet.
+msgid ""
+msgstr ""
+"Project-Id-Version: KheetSheet\n"
+"Language: bn\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Unknown application"
+msgstr "অজানা অ্যাপ্লিকেশন"
+
+msgid "No AT-SPI-exposed shortcuts found for this application.\nGTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+msgstr "এই অ্যাপ্লিকেশনের জন্য AT-SPI-এর মাধ্যমে প্রকাশিত কোনো শর্টকাট পাওয়া যায়নি।\nGTK অ্যাপ? Ctrl+? চেষ্টা করুন — অনেকে তাদের নিজস্ব শর্টকাট উইন্ডো এর সাথে যুক্ত রাখে।"

@@ -1,0 +1,14 @@
+# Burmese translation of KheetSheet.
+msgid ""
+msgstr ""
+"Project-Id-Version: KheetSheet\n"
+"Language: my\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Unknown application"
+msgstr "အမည်မသိအက်ပ်"
+
+msgid "No AT-SPI-exposed shortcuts found for this application.\nGTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+msgstr "ဤအက်ပ်အတွက် AT-SPI မှဖော်ပြသော ဖြတ်လမ်းများ မတွေ့ပါ။\nGTK အက်ပ်လား? Ctrl+? ကိုစမ်းကြည့်ပါ — အများစုသည် ၎င်းတို့၏ ဖြတ်လမ်းဝင်းဒိုးကို ၎င်းနှင့်ချိတ်ဆက်ထားသည်။"

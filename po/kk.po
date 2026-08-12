@@ -1,0 +1,14 @@
+# Kazakh translation of KheetSheet.
+msgid ""
+msgstr ""
+"Project-Id-Version: KheetSheet\n"
+"Language: kk\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Unknown application"
+msgstr "Белгісіз қолданба"
+
+msgid "No AT-SPI-exposed shortcuts found for this application.\nGTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+msgstr "Бұл қолданба үшін AT-SPI арқылы ашылған пернелер тіркесімі табылмады.\nGTK қолданбасы ма? Ctrl+? көріңіз — көбісі өз пернелер тіркесімі терезесін осыған байланыстырады."

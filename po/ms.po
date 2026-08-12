@@ -1,0 +1,14 @@
+# Malay translation of KheetSheet.
+msgid ""
+msgstr ""
+"Project-Id-Version: KheetSheet\n"
+"Language: ms\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Unknown application"
+msgstr "Aplikasi tidak diketahui"
+
+msgid "No AT-SPI-exposed shortcuts found for this application.\nGTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+msgstr "Tiada pintasan yang didedahkan oleh AT-SPI ditemui untuk aplikasi ini.\nAplikasi GTK? Cuba Ctrl+? — kebanyakan mengikat tetingkap pintasan mereka sendiri kepadanya."

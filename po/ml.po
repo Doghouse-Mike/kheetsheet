@@ -1,0 +1,14 @@
+# Malayalam translation of KheetSheet.
+msgid ""
+msgstr ""
+"Project-Id-Version: KheetSheet\n"
+"Language: ml\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Unknown application"
+msgstr "അജ്ഞാത ആപ്ലിക്കേഷൻ"
+
+msgid "No AT-SPI-exposed shortcuts found for this application.\nGTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+msgstr "ഈ ആപ്ലിക്കേഷനായി AT-SPI വഴി വെളിപ്പെടുത്തിയ കുറുക്കുവഴികളൊന്നും കണ്ടെത്തിയില്ല.\nGTK ആപ്പാണോ? Ctrl+? ശ്രമിക്കുക — പലതും അവയുടെ സ്വന്തം കുറുക്കുവഴി ജാലകം ഇതിലേക്ക് ബന്ധിപ്പിക്കുന്നു."

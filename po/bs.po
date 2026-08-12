@@ -1,0 +1,14 @@
+# Bosnian translation of KheetSheet.
+msgid ""
+msgstr ""
+"Project-Id-Version: KheetSheet\n"
+"Language: bs\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Unknown application"
+msgstr "Nepoznata aplikacija"
+
+msgid "No AT-SPI-exposed shortcuts found for this application.\nGTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+msgstr "Nisu pronađeni prečaci izloženi putem AT-SPI za ovu aplikaciju.\nGTK aplikacija? Probajte Ctrl+? — mnoge vežu vlastiti prozor prečica za to."

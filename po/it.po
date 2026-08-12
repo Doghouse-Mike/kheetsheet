@@ -1,0 +1,14 @@
+# Italian translation of KheetSheet.
+msgid ""
+msgstr ""
+"Project-Id-Version: KheetSheet\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Unknown application"
+msgstr "Applicazione sconosciuta"
+
+msgid "No AT-SPI-exposed shortcuts found for this application.\nGTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+msgstr "Nessuna scorciatoia esposta tramite AT-SPI trovata per questa applicazione.\nApplicazione GTK? Prova Ctrl+? — molte associano la propria finestra delle scorciatoie a questo tasto."

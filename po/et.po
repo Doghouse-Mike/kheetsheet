@@ -1,0 +1,14 @@
+# Estonian translation of KheetSheet.
+msgid ""
+msgstr ""
+"Project-Id-Version: KheetSheet\n"
+"Language: et\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Unknown application"
+msgstr "Tundmatu rakendus"
+
+msgid "No AT-SPI-exposed shortcuts found for this application.\nGTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+msgstr "Selle rakenduse jaoks ei leitud AT-SPI kaudu avaldatud kiirklahve.\nGTK rakendus? Proovi Ctrl+? — paljud seovad sellega oma kiirklahvide akna."

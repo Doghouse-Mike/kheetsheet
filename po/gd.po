@@ -1,0 +1,14 @@
+# Gaelic translation of KheetSheet.
+msgid ""
+msgstr ""
+"Project-Id-Version: KheetSheet\n"
+"Language: gd\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Unknown application"
+msgstr "Aplacaid neo-aithnichte"
+
+msgid "No AT-SPI-exposed shortcuts found for this application.\nGTK app? Try Ctrl+? — many bind their own shortcuts window to it."
+msgstr "Cha deach ath-ghoiridean a nochdas AT-SPI a lorg airson na h-aplacaid seo.\nAplacaid GTK a th' ann? Feuch Ctrl+? — bidh mòran a' ceangal an uinneag ath-ghoiridean fhèin ris."
